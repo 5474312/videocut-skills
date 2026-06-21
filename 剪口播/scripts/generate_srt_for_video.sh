@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Generate an SRT file from a finished/cut video.
+# Generate raw transcript files from a finished/cut video.
 #
 # Usage:
 #   generate_srt_for_video.sh <video.mp4> <subtitle_output_dir>
@@ -9,7 +9,7 @@
 #   <subtitle_output_dir>/1_转录/audio.mp3
 #   <subtitle_output_dir>/1_转录/volcengine_result.json
 #   <subtitle_output_dir>/subtitles_with_time.json
-#   <subtitle_output_dir>/3_输出/video.srt
+#   <subtitle_output_dir>/3_输出/video.raw.srt
 #
 
 set -euo pipefail
@@ -92,8 +92,9 @@ const srt = subtitles.map((item, i) => {
   return `${i + 1}\n${toSRT(item.start)} --> ${toSRT(item.end)}\n${text}`;
 }).join('\n\n');
 
-fs.writeFileSync('../3_输出/video.srt', srt.trim() + '\n');
-console.log(`✅ 已生成 ${subtitles.length} 条字幕: ../3_输出/video.srt`);
+fs.writeFileSync('../3_输出/video.raw.srt', srt.trim() + '\n');
+console.log(`✅ 已生成 ${subtitles.length} 条转写初稿: ../3_输出/video.raw.srt`);
 NODE
 
-echo "✅ SRT: $OUTPUT_DIR/3_输出/video.srt"
+echo "✅ Raw SRT: $OUTPUT_DIR/3_输出/video.raw.srt"
+echo "下一步：Agent 读取转写初稿，对照原稿/正文做 AI 校对后，再写入 $OUTPUT_DIR/3_输出/video.srt"

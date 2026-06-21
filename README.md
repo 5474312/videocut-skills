@@ -104,7 +104,8 @@ project/
     |
     v
 剪口播
-转录、识别口误/重复/静音，生成审核页，确认后自动剪辑并生成剪后字幕
+转录、识别口误/重复/静音，生成审核页，确认后剪出新视频
+Agent 基于剪后视频重新转写，并校对成最终字幕
     |
     v
 口播成片
@@ -132,7 +133,7 @@ project/
 | Skill | 作用 | 常见输入 | 常见输出 |
 | --- | --- | --- | --- |
 | `chengfeng-videocut-skills:安装` | 准备 Node.js、FFmpeg、API Key 等环境 | 无 | 环境检查结果 |
-| `chengfeng-videocut-skills:剪口播` | 准备口播基础素材包：审核确认后自动粗剪 + 剪后字幕 | 原始录屏 / 口播视频 | `source_cut.mp4`、`subtitles.srt`、审核页 |
+| `chengfeng-videocut-skills:剪口播` | 准备口播基础素材包：审核确认后粗剪，剪后重转写并 AI 校对字幕 | 原始录屏 / 口播视频 | `source_cut.mp4`、`subtitles.srt`、审核页 |
 | `chengfeng-videocut-skills:口播成片` | 生成分镜页面、时间线预览和最终竖屏 MP4 | 剪后视频、字幕、素材 | 分镜页、预览页、1080x1440 MP4 |
 | `chengfeng-videocut-skills:自进化` | 把使用偏好沉淀回规则 | 用户反馈 | 更新后的规则 |
 
