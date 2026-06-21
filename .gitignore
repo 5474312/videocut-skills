@@ -6,6 +6,7 @@ node_modules/
 **/__pycache__/
 **/*.pyc
 提交/
+口播成片/agents/
 **/log/
 **/memory/
 **/output/

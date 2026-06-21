@@ -1,17 +1,261 @@
-# Videocut Skills
+# chengfeng-videocut-skills
 
-> 用 Claude Code Skills 构建的视频剪辑 Agent，专为口播视频设计
+> Codex / Claude Code 可用的口播视频剪辑 Skills 包。
+
+这个仓库把我自己的视频剪辑流程拆成了一组 Skills：先剪口播、再处理字幕，最后把视频、字幕和素材组织成可审核、可修改、可导出的竖屏成片。
+
+它不是一个剪辑软件，也不是万能视频生成器。它更像是一个给 Agent 用的工作流：你把视频、字幕和素材放好，Agent 按 Skill 往下跑，人只需要看页面、提修改意见、确认结果。
+
+## 一句话安装
+
+复制这条命令即可：
+
+```bash
+npx chengfeng-videocut-skills install
+```
+
+这个 npm 包只是一个很小的安装器。真正的 Skills 源码在 GitHub：
+
+```text
+https://github.com/Agentchengfeng/chengfeng-videocut-skills
+```
+
+安装器每次会从 GitHub 拉取最新版本，所以我只需要维护这个仓库。
+
+默认会安装到两个位置：
+
+```text
+~/.claude/skills/chengfeng-videocut-skills
+~/.codex/skills/chengfeng-videocut-skills
+```
+
+只安装到 Codex：
+
+```bash
+npx chengfeng-videocut-skills install --target codex
+```
+
+只安装到 Claude Code：
+
+```bash
+npx chengfeng-videocut-skills install --target claude
+```
+
+指定安装目录：
+
+```bash
+npx chengfeng-videocut-skills install --dir ~/.codex/skills/chengfeng-videocut-skills
+```
+
+## 它能做什么
+
+```text
+原始口播视频
+    |
+    v
+剪口播
+转录、识别口误/重复/静音，生成审核页，确认后导出剪后视频
+    |
+    v
+导入字幕
+重新转录剪后视频，校对字幕，输出 SRT 或剪映草稿
+    |
+    v
+口播成片
+按字幕拆分镜，生成分镜页面和时间线预览，确认后导出 1080x1440 MP4
+    |
+    v
+高清化 / 自进化
+按需要做高清导出，或把你的偏好写回规则
+```
+
+当前最核心的是两条路径：
+
+1. `剪口播`：把一段口播原片剪成更干净的 A-roll。
+2. `口播成片`：把剪后视频、字幕和素材做成可发布的竖屏成片。
+
+## 典型用法
+
+### 1. 先剪口播
+
+把原始视频给 Agent，说：
+
+```text
+用 chengfeng-videocut-skills:剪口播，帮我处理这个口播视频。
+```
+
+它会做这些事：
+
+- 提取音频
+- 调用火山引擎转录
+- 识别静音、口误、重复、卡顿
+- 生成审核网页
+- 用户确认后执行剪辑
+
+### 2. 再出字幕
+
+剪完后，说：
+
+```text
+用 chengfeng-videocut-skills:导入字幕，给剪后视频生成字幕。
+```
+
+它会重新基于剪后视频转录，不用原视频时间线反推，避免字幕和剪后视频错位。
+
+### 3. 做口播成片
+
+准备一个文件夹：
+
+```text
+project/
+├── source_cut.mp4
+├── subtitles.srt
+└── assets/
+    ├── 产品截图.png
+    ├── 评论截图.png
+    └── 结果页.png
+```
+
+然后说：
+
+```text
+用 chengfeng-videocut-skills:口播成片，把这个文件夹里的视频和字幕做成 1080x1440 竖屏 MP4。
+先生成分镜页面给我确认，不要直接导出。
+```
+
+这个 Skill 的默认顺序是：
+
+```text
+视频 + 字幕 + 素材
+    |
+    v
+分镜页面
+按字幕拆段，判断每段该用原视频、截图、页面、HTML 画面还是动画
+    |
+    v
+时间线预览
+把所有画面按时间线放在一起，方便看节奏和错位
+    |
+    v
+合成导出
+确认后导出 1080x1440 竖屏 MP4
+```
+
+这里的关键不是让用户手动剪时间线，而是把中间判断变成 Agent 能读写的页面。页面可以交给 Codex / Claude Code 检查，也可以由人直接看。
+
+## Skill 清单
+
+| Skill | 作用 | 常见输入 | 常见输出 |
+| --- | --- | --- | --- |
+| `chengfeng-videocut-skills:安装` | 准备 Node.js、FFmpeg、API Key 等环境 | 无 | 环境检查结果 |
+| `chengfeng-videocut-skills:剪口播` | 转录口播，识别口误、重复、静音，生成审核页 | 原始视频 | 剪后视频、审核页、删除清单 |
+| `chengfeng-videocut-skills:导入字幕` | 给剪后视频生成字幕，必要时推送剪映草稿 | 剪后视频、可选原稿 | SRT、剪映草稿 |
+| `chengfeng-videocut-skills:口播成片` | 生成分镜页面、时间线预览和最终竖屏 MP4 | 剪后视频、字幕、素材 | 分镜页、预览页、1080x1440 MP4 |
+| `chengfeng-videocut-skills:高清化` | 用 FFmpeg 做高清导出 | 视频文件 | 高清视频 |
+| `chengfeng-videocut-skills:自进化` | 把使用偏好沉淀回规则 | 用户反馈 | 更新后的规则 |
+
+## 环境配置
+
+基础依赖：
+
+| 依赖 | 用途 |
+| --- | --- |
+| Node.js 18+ | 运行安装器和脚本 |
+| FFmpeg | 音视频处理 |
+| curl | API 请求 |
+| 火山引擎语音识别 API Key | 口播转录 |
+
+安装后复制环境变量模板：
+
+```bash
+cd ~/.claude/skills/chengfeng-videocut-skills
+cp .env.example .env
+```
+
+然后在 `.env` 里填写：
+
+```text
+VOLCENGINE_API_KEY=your_volcengine_api_key_here
+```
+
+如果你只装到 Codex，对应目录是：
+
+```bash
+cd ~/.codex/skills/chengfeng-videocut-skills
+cp .env.example .env
+```
+
+## 仓库结构
+
+```text
+chengfeng-videocut-skills/
+├── README.md
+├── package.json
+├── bin/
+│   └── cli.js
+├── 剪口播/
+│   ├── SKILL.md
+│   ├── scripts/
+│   └── 用户习惯/
+├── 导入字幕/
+│   ├── SKILL.md
+│   ├── 安装/
+│   │   └── SKILL.md
+│   ├── references/
+│   └── scripts/
+├── 口播成片/
+│   ├── SKILL.md
+│   ├── templates/
+│   │   ├── storyboard-audit.html
+│   │   └── timeline-preview.html
+│   ├── references/
+│   └── scripts/
+├── 高清化/
+│   ├── SKILL.md
+│   └── scripts/
+└── 自进化/
+    ├── SKILL.md
+    └── README.md
+```
+
+不会上传的本地运行产物包括：
+
+```text
+.env
+log/
+memory/
+output/
+导入字幕/capcut-mate/
+口播成片/agents/
+*.mp4 / *.mov / *.wav / *.zip
+```
+
+这些是本地依赖、日志、视频素材或导出结果，不应该放进 GitHub。
+
+## npm 和 GitHub 的关系
+
+npm 包只负责提供这个命令：
+
+```bash
+npx chengfeng-videocut-skills install
+```
+
+执行后，它会从 GitHub 下载最新 Skills。也就是说：
+
+- GitHub 是源码和文档的真相源。
+- npm 是下载入口，方便在公众号、视频简介、聊天里只放一条命令。
+- 更新 Skill 内容时，通常只需要推 GitHub。
+- 只有安装器本身变了，才需要重新发布 npm。
 
 ## 官方来源
 
 本项目由 **chengfeng / AI产品自由** 原创并维护。
 
-- GitHub: https://github.com/Agentchengfeng
-- X: https://x.com/chengfeng240928
-- 小红书：AI产品自由
-- 公众号：AI产品自由
-- B站：AI产品自由
-- 抖音 / 视频号：AI产品自由
+```text
+GitHub: Agentchengfeng
+X: chengfeng240928
+小红书 / 公众号 / B站 / 抖音 / 视频号: AI产品自由
+```
 
 原始仓库：
 
@@ -19,263 +263,12 @@
 https://github.com/Agentchengfeng/chengfeng-videocut-skills
 ```
 
-如果你使用、转载、翻译、二次发布或改造成自己的 Skill，请保留原作者和原始仓库链接。
+如果你使用、转载、翻译、二次发布或改造成自己的 Skill，请保留原作者、原始仓库链接、`LICENSE` 和 `NOTICE.md`。
 
-本项目使用 **Apache License 2.0**。你可以学习、复制、修改、分发和商用，但重新分发或发布派生版本时，需要保留本仓库的 `LICENSE` 和 `NOTICE.md` 里的来源归属信息。
+## 协议
 
-如果你发现有人删掉来源、换名二次发布：
+本项目使用 Apache License 2.0。
 
-1. 先保存证据：对方页面链接、截图、发布时间、下载包或 fork 记录。
-2. 给对方发一句话要求补回来源：请保留 `chengfeng / AI产品自由`、原始仓库链接和 `NOTICE.md`。
-3. 对方拒绝或不处理时，向平台提交版权/开源协议违规投诉，并附上本仓库链接、`LICENSE`、`NOTICE.md` 和对方删除来源的证据。
-4. GitHub 上可以开 Issue / Pull Request 要求补回；明显搬运且删来源的，可以走 GitHub DMCA 或平台侵权投诉流程。
+你可以学习、复制、修改、分发和商用；重新分发或发布派生版本时，需要保留本仓库的 `LICENSE` 和 `NOTICE.md` 来源信息。
 
-## 为什么做这个？
-
-剪映的"智能剪口播"有两个痛点：
-1. **无法理解语义**：重复说的句子、说错后纠正的内容，它识别不出来
-2. **字幕质量差**：专业术语（Claude Code、MCP、API）经常识别错误
-
-这个 Agent 用 Claude 的语义理解能力解决第一个问题，用自定义词典解决第二个问题。
-
-## 效果演示
-
-**输入**：19 分钟口播原片（各种口误、卡顿、重复）
-
-**输出**：
-- 自动识别 608 处问题（静音 114 + 口误/重复 494）
-- 剪辑后视频 72MB
-- 全程 AI 辅助，人工只需确认
-
-## 核心功能
-
-| 功能 | 说明 | 对比剪映 |
-|------|------|----------|
-| **语义理解** | AI 逐句分析，识别重说/纠正/卡顿 | 只能模式匹配 |
-| **静音检测** | >0.3s 自动标记，可调阈值 | 固定阈值 |
-| **重复句检测** | 相邻句开头≥5字相同 → 删前保后 | 无此功能 |
-| **句内重复** | "好我们接下来好我们接下来做" → 删重复部分 | 无此功能 |
-| **词典纠错** | 自定义专业术语词典 | 无此功能 |
-| **自更新** | 记住你的偏好，越用越准 | 无此功能 |
-
-## 快速开始
-
-### 1. 安装 Skills
-
-如果你只想复制命令，直接用 npm 安装：
-
-```bash
-npx chengfeng-videocut-skills install
-```
-
-这个 npm 包只是一个很小的安装器。执行时会从 GitHub 拉取最新仓库：
-
-```text
-https://github.com/Agentchengfeng/chengfeng-videocut-skills
-```
-
-所以后续只需要维护 GitHub，用户每次执行命令都会安装仓库里的最新 Skills。
-
-它会把 Skills 安装到：
-
-- `~/.claude/skills/chengfeng-videocut-skills`
-- `~/.codex/skills/chengfeng-videocut-skills`
-
-也可以只安装到 Codex：
-
-```bash
-npx chengfeng-videocut-skills install --target codex
-```
-
-如果你习惯从 GitHub 克隆，也可以用：
-
-```bash
-# 克隆到 Claude Code skills 目录
-git clone https://github.com/Agentchengfeng/chengfeng-videocut-skills.git ~/.claude/skills/chengfeng-videocut-skills
-```
-
-### 2. 配置 API Key
-
-```bash
-cd ~/.claude/skills/chengfeng-videocut-skills
-cp .env.example .env
-# 编辑 .env，填入火山引擎 API Key
-```
-
-### 3. 安装环境
-
-打开 Claude Code，输入：
-
-```
-/chengfeng-videocut-skills:安装
-```
-
-AI 会自动：
-- 检查 Python、FFmpeg、Node.js
-- 安装 FunASR（口误识别模型，约 2GB）
-- 安装 Whisper large-v3（字幕模型，约 3GB）
-
-## 使用流程
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  /chengfeng-videocut-skills:安装  → 首次使用，安装环境和模型 │
-└─────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│  /chengfeng-videocut-skills:剪口播 视频.mp4              │
-│                                                         │
-│  1. 提取音频 → 上传云端                                 │
-│  2. 火山引擎转录 → 字级别时间戳                         │
-│  3. AI 审核：静音/口误/重复/语气词                      │
-│  4. 生成审核网页 → 浏览器打开                           │
-└─────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│  【人工审核 + 执行剪辑】                                │
-│                                                         │
-│  - 单击跳转播放                                         │
-│  - 双击选中/取消                                        │
-│  - Shift 拖动多选                                       │
-│  - 确认后点击「执行剪辑」→ 自动 FFmpeg 剪辑            │
-└─────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│  /chengfeng-videocut-skills:字幕                         │
-│                                                         │
-│  - Whisper 转录                                         │
-│  - 词典纠错（Claude Code → claude code）                │
-│  - 人工确认 → 烧录字幕                                  │
-└─────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│  /chengfeng-videocut-skills:高清化  （可选）             │
-│                                                         │
-│  - 2-pass 编码 + 锐化                                   │
-│  - 自动匹配原片参数，码率 1.2x                          │
-│  - 像剪映一样导出高清                                   │
-└─────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│  /chengfeng-videocut-skills:自更新  （可选）             │
-│                                                         │
-│  告诉 AI 你的偏好，它会记住：                           │
-│  - "静音阈值改成 1 秒"                                  │
-│  - "保留适量嗯作为过渡"                                 │
-└─────────────────────────────────────────────────────────┘
-```
-
-## Skill 清单
-
-| Skill | 功能 | 输入 | 输出 |
-|-------|------|------|------|
-| `安装` | 环境准备 | 无 | 安装日志 |
-| `剪口播` | 转录 + AI 审核 + 剪辑 | 视频文件 | 剪辑后视频 |
-| `高清化` | 2-pass + 锐化导出 | 视频文件 | 高清视频 |
-| `导入字幕` | 剪后视频直转字幕 + 推送剪映草稿（默认字号 10 / 行间距 13） | 剪后视频 + 可选原稿 | SRT + 剪映草稿 |
-| `自更新` | 记录偏好 | 用户反馈 | 更新规则文件 |
-| `口播成片` | 分镜核对 + 时间线预览 + 合成导出 | 视频 + 字幕 + 可选素材 | 1080x1440 竖版 MP4 |
-
-## 目录结构
-
-```
-chengfeng-videocut-skills/
-├── README.md           # 本文件
-├── package.json        # npm 安装器配置
-├── .npmignore          # npm 发布排除规则
-├── LICENSE             # Apache-2.0 开源协议
-├── NOTICE.md           # 官方来源与转载归属声明
-├── CITATION.cff        # GitHub 引用信息
-├── .env.example        # API Key 模板
-├── bin/
-│   └── cli.js          # npx 安装入口，从 GitHub 拉取最新 Skills
-├── 安装/               # 环境安装 skill
-├── 剪口播/             # 核心：转录 + AI 审核 + 剪辑
-│   ├── SKILL.md        # 流程说明
-│   ├── *.js            # 脚本（生成字幕、审核页面、服务器）
-│   ├── *.sh            # 脚本（转录、剪辑）
-│   └── 用户习惯/       # 审核规则（可自定义）
-│       ├── 1-核心原则.md       # 删前保后
-│       ├── 2-语气词检测.md     # 嗯啊呃
-│       ├── 3-静音段处理.md     # >0.3s 删除
-│       ├── 4-重复句检测.md     # 相邻句开头相同
-│       ├── 5-卡顿词.md         # 那个那个、就是就是
-│       ├── 6-句内重复检测.md   # A+中间+A 模式
-│       ├── 7-连续语气词.md     # 嗯啊、啊呃
-│       └── 8-重说纠正.md       # 部分重复、否定纠正
-├── 导入字幕/           # 字幕生成与剪映草稿推送
-│   ├── SKILL.md
-│   └── scripts/
-├── 高清化/             # 2-pass + 锐化导出
-│   └── scripts/
-│       └── hd_export.sh
-├── 自更新/             # 自我进化机制
-└── 口播成片/           # 分镜核对 -> 时间线预览 -> 合成
-    ├── SKILL.md
-    ├── templates/      # storyboard-audit.html + timeline-preview.html
-    ├── references/
-    └── scripts/
-```
-
-## 技术架构
-
-```
-┌──────────────────┐     ┌──────────────────┐
-│   火山引擎 ASR   │────▶│  字级别时间戳    │
-│  （云端转录）    │     │  subtitles.json  │
-└──────────────────┘     └────────┬─────────┘
-                                  │
-                                  ▼
-┌──────────────────┐     ┌──────────────────┐
-│   Claude Code    │────▶│   AI 审核结果    │
-│  （语义分析）    │     │  auto_selected   │
-└──────────────────┘     └────────┬─────────┘
-                                  │
-                                  ▼
-┌──────────────────┐     ┌──────────────────┐
-│   审核网页       │────▶│   最终删除列表   │
-│  （人工确认）    │     │  delete_segments │
-└──────────────────┘     └────────┬─────────┘
-                                  │
-                                  ▼
-┌──────────────────┐     ┌──────────────────┐
-│     FFmpeg       │────▶│   剪辑后视频     │
-│  filter_complex  │     │   xxx_cut.mp4    │
-└──────────────────┘     └──────────────────┘
-```
-
-## 依赖
-
-| 依赖 | 用途 | 安装方式 |
-|------|------|----------|
-| Node.js 18+ | 运行脚本 | `brew install node` |
-| FFmpeg | 音视频处理 | `brew install ffmpeg` |
-| Python 3.8+ | 模型运行 | 系统自带 |
-| 火山引擎 API | 语音转录 | [申请 Key](https://console.volcengine.com/) |
-
-## 常见问题
-
-### Q: 火山引擎转录超时？
-
-上传音频到 uguu.se（脚本默认），不要用 catbox.moe（火山引擎访问慢）。
-
-### Q: 审核网页打不开？
-
-检查端口 8899 是否被占用：`lsof -i :8899`
-
-### Q: 剪辑后音画不同步？
-
-使用 `filter_complex + trim` 而非 `concat demuxer`，脚本已处理。
-
-### Q: 如何添加自定义词典？
-
-编辑 `字幕/词典.txt`，每行一个词：
-```
-Claude Code
-MCP
-API
-```
-
-## License
-
-Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
+如果发现有人删除来源、换名二次发布，可以先保存对方页面、截图、发布时间、下载包或 fork 记录，再要求对方补回来源。对方拒绝时，可以向对应平台提交版权或开源协议违规投诉。
