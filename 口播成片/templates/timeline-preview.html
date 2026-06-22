@@ -262,6 +262,17 @@
       background: #fffdf8;
     }
 
+    .stage-shell.image-side-border-mode #stage img {
+      width: calc(100% - 32px);
+      height: auto;
+      max-height: calc(100% - 32px);
+      border-left: 3px solid rgba(255, 253, 248, .82);
+      border-right: 3px solid rgba(255, 253, 248, .82);
+      border-radius: 8px;
+      box-shadow: 0 14px 34px rgba(0, 0, 0, .16);
+      background: #fffdf8;
+    }
+
     .cue-card {
       margin-top: 12px;
       display: flex;
@@ -899,6 +910,7 @@
       const useVideoWindow = scene.kind === "video" && scene.videoLayout === "window";
       stageShell.classList.toggle("video-window-mode", useVideoWindow);
       stageShell.classList.toggle("image-small-mode", scene.kind === "image" && scene.imageLayout === "small");
+      stageShell.classList.toggle("image-side-border-mode", scene.kind === "image" && scene.imageLayout === "side-border");
 
       if (scene.kind === "video") {
         stageVideo = document.createElement("video");
