@@ -425,7 +425,7 @@ function setActiveShot(id) {
   document.querySelectorAll('.shot-link').forEach(button => button.classList.toggle('active', button.dataset.target === id));
 }
 function observeShots() {
-  const sections = Array.from(document.querySelectorAll('.segment'));
+  const sections = Array.from(document.querySelectorAll('.segment')).filter(section => section instanceof Element);
   if (!sections.length) return;
   setActiveShot(sections[0].id);
   if (!('IntersectionObserver' in window)) return;
@@ -435,7 +435,11 @@ function observeShots() {
       .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
     if (visible) setActiveShot(visible.target.id);
   }, { rootMargin: '-22% 0px -64% 0px', threshold: [0.12, 0.28, 0.5] });
-  sections.forEach(section => observer.observe(section));
+  sections.forEach(section => {
+    try {
+      observer.observe(section);
+    } catch (_error) {}
+  });
 }
 function updateSummary() {
   document.getElementById('segmentCount').textContent = `${SEGMENTS.length} 分镜段`;

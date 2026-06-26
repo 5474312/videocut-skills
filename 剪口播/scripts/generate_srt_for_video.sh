@@ -37,33 +37,8 @@ cd "$OUTPUT_DIR/1_转录"
 echo "🎧 提取剪后视频音频..."
 ffmpeg -y -v error -i "file:$VIDEO_PATH" -vn -acodec libmp3lame audio.mp3
 
-echo "☁️ 上传音频..."
-curl -sS -L -o upload_response.json -F "files[]=@audio.mp3" https://uguu.se/upload
-
-AUDIO_URL=$(node - <<'NODE'
-const fs = require('fs');
-const raw = fs.readFileSync('upload_response.json', 'utf8');
-let data;
-try {
-  data = JSON.parse(raw);
-} catch (error) {
-  console.error('上传响应不是 JSON:');
-  console.error(raw.slice(0, 500));
-  process.exit(1);
-}
-const url = data?.files?.[0]?.url;
-if (!url) {
-  console.error('上传响应里没有音频 URL:');
-  console.error(JSON.stringify(data, null, 2));
-  process.exit(1);
-}
-console.log(url);
-NODE
-)
-
-echo "$AUDIO_URL" > audio_url.txt
-
-bash "$TRANSCRIBE_SCRIPT" "$AUDIO_URL"
+echo "🎤 调用火山引擎录音文件识别 2.0..."
+bash "$TRANSCRIBE_SCRIPT" audio.mp3
 
 node - <<'NODE'
 const fs = require('fs');

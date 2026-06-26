@@ -2,6 +2,7 @@
 const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
+const { loadUserConfig, renderSummary } = require("./user_config.cjs");
 
 function parseArgs(argv) {
   const args = {};
@@ -38,6 +39,17 @@ function loadPlaywright() {
   throw new Error("Unable to load Playwright. Install it locally or set PLAYWRIGHT_MODULE.");
 }
 
+function findChromeExecutable(explicitPath) {
+  const candidates = [
+    explicitPath,
+    process.env.CHROME_EXECUTABLE,
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+  ].filter(Boolean);
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) || "";
+}
+
 function requireArg(args, name) {
   if (!args[name]) {
     console.error(`[error] missing required argument: --${name}`);
@@ -50,25 +62,44 @@ async function main() {
   const args = parseArgs(process.argv);
   const projectDir = path.resolve(requireArg(args, "project-dir"));
   const inputVideo = path.resolve(requireArg(args, "input-video"));
+  const userConfig = loadUserConfig({
+    configPath: args.config,
+    aspectRatio: args["aspect-ratio"] || args.ratio,
+  });
   const player = args.player || "final-player.html";
   const playerUrl = args["player-url"] || "";
   const fps = Number(args.fps || 30);
-  const width = Number(args.width || 1080);
-  const height = Number(args.height || 1440);
+  const width = Number(args.width || userConfig.width);
+  const height = Number(args.height || userConfig.height);
   const stageSelector = args.stage || "#stage";
   const framesDir = path.resolve(projectDir, args["frames-dir"] || "renders/final-video-frames");
-  const output = path.resolve(projectDir, args.output || "renders/final-1080x1440.mp4");
+  const output = path.resolve(projectDir, args.output || `renders/final-${width}x${height}.mp4`);
   const tempVideo = path.resolve(projectDir, args["temp-video"] || "renders/final-video-only.mp4");
+  const quality = Number(args.quality || 100);
+  const requestedFrameFormat = String(args["frame-format"] || args["image-format"] || "png").toLowerCase();
+  const frameFormat = requestedFrameFormat === "png" ? "png" : "jpeg";
+  const frameExt = frameFormat === "png" ? "png" : "jpg";
+  const preset = args.preset || "slow";
+  const crf = String(args.crf || 14);
+  const audioBitrate = args["audio-bitrate"] || "192k";
 
   if (!fs.existsSync(projectDir)) throw new Error(`Project directory not found: ${projectDir}`);
   if (!fs.existsSync(inputVideo)) throw new Error(`Input video not found: ${inputVideo}`);
+  console.log(`[config] ${userConfig.configPath}`);
+  console.log(`[ratio] ${renderSummary(userConfig)}`);
+  console.log(`[frames] format=${frameFormat}${frameFormat === "jpeg" ? ` quality=${quality}` : ""}`);
+  console.log(`[encode] preset=${preset} crf=${crf}`);
 
   fs.rmSync(framesDir, { recursive: true, force: true });
   fs.mkdirSync(framesDir, { recursive: true });
   fs.mkdirSync(path.dirname(output), { recursive: true });
 
   const { chromium } = loadPlaywright();
-  const browser = await chromium.launch({ headless: true });
+  const chromeExecutable = findChromeExecutable(args["chrome-executable"]);
+  const launchOptions = chromeExecutable
+    ? { headless: true, executablePath: chromeExecutable }
+    : { headless: true };
+  const browser = await chromium.launch(launchOptions);
   const page = await browser.newPage({
     viewport: { width, height },
     deviceScaleFactor: 1,
@@ -95,12 +126,13 @@ async function main() {
       await window.seekTo(t);
     }, time);
 
-    const frameName = `frame-${String(i).padStart(5, "0")}.jpg`;
-    await stage.screenshot({
+    const frameName = `frame-${String(i).padStart(5, "0")}.${frameExt}`;
+    const screenshotOptions = {
       path: path.join(framesDir, frameName),
-      type: "jpeg",
-      quality: Number(args.quality || 92),
-    });
+      type: frameFormat,
+    };
+    if (frameFormat === "jpeg") screenshotOptions.quality = quality;
+    await stage.screenshot(screenshotOptions);
 
     if (i % 150 === 0 || i === frameCount - 1) {
       const percent = (((i + 1) / frameCount) * 100).toFixed(1);
@@ -116,10 +148,10 @@ async function main() {
   execFileSync("ffmpeg", [
     "-y",
     "-framerate", String(fps),
-    "-i", path.join(framesDir, "frame-%05d.jpg"),
+    "-i", path.join(framesDir, `frame-%05d.${frameExt}`),
     "-c:v", "libx264",
-    "-preset", args.preset || "medium",
-    "-crf", String(args.crf || 18),
+    "-preset", preset,
+    "-crf", crf,
     "-pix_fmt", "yuv420p",
     tempVideo,
   ], { stdio: "inherit" });
@@ -132,7 +164,7 @@ async function main() {
     "-map", "1:a:0?",
     "-c:v", "copy",
     "-c:a", "aac",
-    "-b:a", args["audio-bitrate"] || "192k",
+    "-b:a", audioBitrate,
     "-shortest",
     output,
   ], { stdio: "inherit" });

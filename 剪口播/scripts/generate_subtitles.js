@@ -18,21 +18,39 @@ if (!fs.existsSync(resultFile)) {
 
 const result = JSON.parse(fs.readFileSync(resultFile, 'utf8'));
 
-// 提取所有字
+const utterances = result.utterances || result.result?.utterances || [];
+
+if (!Array.isArray(utterances) || utterances.length === 0) {
+  console.error('❌ 转录结果里没有 utterances');
+  process.exit(1);
+}
+
+// 提取所有字/词。v3 Seed ASR 2.0 会返回少量空格 token，时间戳为 -1；这些不能进入剪辑时间轴。
 const allWords = [];
-for (const utterance of result.utterances) {
+let skippedInvalidWords = 0;
+for (const utterance of utterances) {
   if (utterance.words) {
     for (const word of utterance.words) {
+      const text = String(word.text || '').trim();
+      const startTime = Number(word.start_time);
+      const endTime = Number(word.end_time);
+      if (!text || startTime < 0 || endTime < 0) {
+        skippedInvalidWords += 1;
+        continue;
+      }
       allWords.push({
-        text: word.text,
-        start: word.start_time / 1000,
-        end: word.end_time / 1000
+        text,
+        start: startTime / 1000,
+        end: endTime / 1000
       });
     }
   }
 }
 
 console.log('原始字数:', allWords.length);
+if (skippedInvalidWords > 0) {
+  console.log('已过滤无效时间戳 token:', skippedInvalidWords);
+}
 
 // 如果有删除片段，映射时间
 let outputWords = allWords;

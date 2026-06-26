@@ -76,9 +76,9 @@ output/
     ↓
 1. 提取音频 (ffmpeg)
     ↓
-2. 上传获取公网 URL (uguu.se)
+2. 调用火山引擎录音文件识别 2.0（Seed ASR v3）
     ↓
-3. 火山引擎 API 转录
+3. 生成 volcengine_result.json
     ↓
 4. 生成字级别字幕 (subtitles_words.json)
     ↓
@@ -132,14 +132,24 @@ cd 1_转录
 # 1. 提取音频（文件名有冒号需加 file: 前缀）
 ffmpeg -i "file:$VIDEO_PATH" -vn -acodec libmp3lame -y audio.mp3
 
-# 2. 上传获取公网 URL
-curl -s -F "files[]=@audio.mp3" https://uguu.se/upload
-# 返回: {"success":true,"files":[{"url":"https://h.uguu.se/xxx.mp3"}]}
-
-# 3. 调用火山引擎 API
+# 2. 调用火山引擎录音文件识别 2.0（默认 resource_id=volc.seedasr.auc）
 SKILL_DIR="/Volumes/成峰/代码/剪辑Agent/.claude/skills/剪口播"
-"$SKILL_DIR/scripts/volcengine_transcribe.sh" "https://h.uguu.se/xxx.mp3"
+"$SKILL_DIR/scripts/volcengine_transcribe.sh" audio.mp3
 # 输出: volcengine_result.json
+```
+
+转录脚本默认使用火山 v3 Seed ASR 2.0：
+
+```text
+POST /api/v3/auc/bigmodel/submit
+POST /api/v3/auc/bigmodel/query
+X-Api-Resource-Id: volc.seedasr.auc
+```
+
+如果要临时回退或对比其他资源，可用环境变量覆盖：
+
+```bash
+VOLCENGINE_ASR_RESOURCE_ID=volc.bigasr.auc "$SKILL_DIR/scripts/volcengine_transcribe.sh" audio.mp3
 ```
 
 ### 步骤 4: 生成字级时间轴
@@ -150,6 +160,12 @@ node "$SKILL_DIR/scripts/generate_subtitles.js" volcengine_result.json
 
 cd ..
 ```
+
+时间戳规则：
+
+- `generate_subtitles.js` 必须兼容 `result.utterances`（v3）和旧版 `utterances`。
+- v3 结果里的无效时间戳 token（常见为空格，`start_time/end_time = -1`）必须过滤，否则会制造假静音。
+- 2026-06-25 的 180 秒样本评估：Seed ASR 2.0 相对校对字幕时间窗的词级边界偏移中位数约 80ms，P90 约 240ms，最大约 620ms；可作为默认剪口播时间轴，但长句仍需按词级时间戳重新切成字幕行。
 
 ### 步骤 5: 分析口误（脚本+AI）
 
@@ -353,6 +369,7 @@ node "$SKILL_DIR/scripts/review_server.js" 8899 "$VIDEO_PATH"
 用户在网页中：
 - 播放视频画面确认
 - 勾选/取消删除项
+- 左键按住滑过文字可批量标删/恢复，支持跨行滑动；拖过头时不松手往回拉，选区会实时收窄
 - 点击「执行剪辑」
 
 ### 步骤 8: 监听剪后视频
@@ -492,8 +509,30 @@ assets/         = 可选素材
 
 ### 火山引擎 API Key
 
+如果用户没有火山语音识别 API Key，先让用户打开火山控制台开通“录音文件识别 2.0”并创建 API Key：
+
+```text
+https://console.volcengine.com/speech/new/setting/activate?projectName=default
+```
+
+当前默认模型资源：
+
+```text
+录音文件识别 2.0 / Seed ASR
+resource_id = volc.seedasr.auc
+```
+
+拿到 Key 后，再写入 Skills 根目录的 `.env`：
+
 ```bash
 cd /Volumes/成峰/代码/剪辑Agent/.claude/skills
 cp .env.example .env
 # 编辑 .env 填入 VOLCENGINE_API_KEY=xxx
+```
+
+如果是通过 npm 安装，Skills 根目录通常是：
+
+```bash
+~/.claude/skills/chengfeng-videocut-skills
+~/.codex/skills/chengfeng-videocut-skills
 ```

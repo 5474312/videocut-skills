@@ -8,6 +8,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const subtitlesFile = process.argv[2] || 'subtitles_words.json';
 const autoSelectedFile = process.argv[3] || 'auto_selected.json';
@@ -35,6 +36,26 @@ if (fs.existsSync(autoSelectedFile)) {
   console.log('AI 预选:', autoSelected.length, '个元素');
 }
 
+function readVideoAspectRatio(file) {
+  const target = fs.existsSync(file) ? file : videoBaseName;
+  try {
+    const output = execFileSync('ffprobe', [
+      '-v', 'error',
+      '-select_streams', 'v:0',
+      '-show_entries', 'stream=width,height',
+      '-of', 'csv=p=0',
+      target,
+    ], { encoding: 'utf8' }).trim();
+    const [width, height] = output.split(',').map(Number);
+    if (width > 0 && height > 0) return `${width} / ${height}`;
+  } catch (e) {
+    console.warn('⚠️ 未能读取视频比例，使用默认竖屏比例 9:16');
+  }
+  return '9 / 16';
+}
+
+const videoAspectRatio = readVideoAspectRatio(videoFile);
+
 const html = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -61,7 +82,7 @@ const html = `<!DOCTYPE html>
       --highlight-fg: #7c5a10;
       --font-body: "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --font-mono: "SF Mono", "JetBrains Mono", "Menlo", monospace;
-      --sidebar-w: 360px;
+      --sidebar-w: clamp(460px, 42vw, 600px);
       --header-h: 44px;
     }
 
@@ -142,12 +163,6 @@ const html = `<!DOCTYPE html>
       font-weight: 500;
     }
     .header-btn.primary:hover { background: #0d6b5e; }
-    .header-divider {
-      width: 1px;
-      height: 16px;
-      background: var(--border);
-      margin: 0 4px;
-    }
     select.speed-select {
       height: 28px;
       padding: 0 6px;
@@ -161,6 +176,10 @@ const html = `<!DOCTYPE html>
       outline: none;
     }
     select.speed-select:hover { border-color: rgba(15,15,15,0.15); }
+    .transport-speed {
+      margin-left: 2px;
+      flex-shrink: 0;
+    }
 
     /* ─── Main layout ─── */
     .main {
@@ -188,10 +207,12 @@ const html = `<!DOCTYPE html>
 
     /* Video */
     .video-wrap {
-      padding: 12px 14px 0;
+      padding: 10px 10px 0;
     }
     #player {
       width: 100%;
+      aspect-ratio: ${videoAspectRatio};
+      object-fit: contain;
       border-radius: 8px;
       background: #000;
       display: block;
@@ -285,38 +306,7 @@ const html = `<!DOCTYPE html>
     }
     .clip-saved b { color: var(--accent-text); font-weight: 600; }
 
-    /* AI suggestion card */
-    .suggest-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 4px 0;
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .suggest-row .label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .suggest-count {
-      font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text);
-      background: var(--bg-muted);
-      padding: 1px 7px;
-      border-radius: 8px;
-    }
-
     /* Keyboard hints */
-    .kbd-grid {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 3px 10px;
-      font-size: 12px;
-      color: var(--text-muted);
-    }
     kbd {
       display: inline-block;
       font-family: var(--font-mono);
@@ -327,6 +317,47 @@ const html = `<!DOCTYPE html>
       padding: 1px 5px;
       color: var(--text);
       white-space: nowrap;
+    }
+
+    .shortcut-strip {
+      min-height: 42px;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 7px 16px;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+    .shortcut-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .shortcut-list {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .shortcut-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .shortcut-item.primary {
+      color: var(--accent-text);
+      font-weight: 500;
+    }
+    .shortcut-item.primary kbd {
+      background: var(--accent-soft);
+      border-color: transparent;
+      color: var(--accent-text);
     }
 
     /* ─── Right panel ─── */
@@ -347,7 +378,10 @@ const html = `<!DOCTYPE html>
       padding: 0 16px;
       gap: 6px;
       flex-shrink: 0;
+      overflow-x: auto;
     }
+    .filter-bar::-webkit-scrollbar,
+    .shortcut-strip::-webkit-scrollbar { display: none; }
     .search-box {
       display: flex;
       align-items: center;
@@ -484,7 +518,6 @@ const html = `<!DOCTYPE html>
       border-radius: 3px;
       text-decoration: none;
     }
-
     /* Gap pills */
     .gap {
       display: inline-block;
@@ -514,7 +547,6 @@ const html = `<!DOCTYPE html>
       border-color: #e8d89c;
       text-decoration: none;
     }
-
     /* Bottom legend */
     .bottom-legend {
       height: 32px;
@@ -616,6 +648,116 @@ const html = `<!DOCTYPE html>
     .sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
     .transcript-body::-webkit-scrollbar-thumb:hover,
     .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
+
+    @media (max-width: 820px), (max-aspect-ratio: 3 / 4) {
+      .header {
+        padding: 0 10px;
+        gap: 8px;
+      }
+      .header-left {
+        min-width: 0;
+      }
+      .header-left .logo {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .header-left .badge {
+        display: none;
+      }
+      .header-right {
+        flex-shrink: 0;
+      }
+      .main {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+        max-height: 58vh;
+        border-right: 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .video-wrap {
+        display: flex;
+        justify-content: center;
+        padding: 8px 10px 0;
+      }
+      #player {
+        width: auto;
+        height: min(42vh, 520px);
+        max-width: calc(100vw - 20px);
+      }
+      .transport {
+        padding: 8px 12px;
+        gap: 6px;
+      }
+      .sidebar-section {
+        padding: 8px 12px 10px;
+      }
+      .card {
+        padding: 10px;
+      }
+      .card-title {
+        margin-bottom: 6px;
+      }
+      .clip-row {
+        margin-bottom: 6px;
+      }
+      .clip-time-big {
+        font-size: 18px;
+      }
+      .right-panel {
+        width: 100%;
+        min-height: 0;
+      }
+      .filter-bar {
+        height: 38px;
+        padding: 0 12px;
+      }
+      .shortcut-strip {
+        min-height: 38px;
+        padding: 6px 12px;
+        gap: 10px;
+      }
+      .shortcut-list {
+        gap: 10px;
+      }
+      .transcript-body {
+        padding: 12px 14px 56px;
+      }
+      .content {
+        max-width: none;
+        line-height: 2.25;
+      }
+      .bottom-legend {
+        justify-content: flex-start;
+        overflow-x: auto;
+        padding: 0 12px;
+      }
+      .bottom-legend::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .header-btn {
+        padding: 0 8px;
+      }
+      .header-btn:not(.primary) .header-btn-label {
+        display: none;
+      }
+      .search-box {
+        min-width: 120px;
+      }
+      #time {
+        font-size: 12px;
+      }
+      select.speed-select {
+        width: 64px;
+      }
+      .shortcut-title {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -637,17 +779,8 @@ const html = `<!DOCTYPE html>
       <span class="badge">已分析</span>
     </div>
     <div class="header-right">
-      <select class="speed-select" id="speed" onchange="player.playbackRate=parseFloat(this.value)">
-        <option value="0.5">0.5x</option>
-        <option value="0.75">0.75x</option>
-        <option value="1" selected>1.0x</option>
-        <option value="1.25">1.25x</option>
-        <option value="1.5">1.5x</option>
-        <option value="2">2.0x</option>
-      </select>
-      <div class="header-divider"></div>
       <button class="header-btn" onclick="copyDeleteList()" title="复制删除列表">
-        <span>&#128203;</span> 字幕
+        <span>&#128203;</span><span class="header-btn-label">字幕</span>
       </button>
       <button class="header-btn primary" onclick="executeCut()">执行剪辑</button>
     </div>
@@ -666,6 +799,14 @@ const html = `<!DOCTYPE html>
         <button class="transport-btn" onclick="player.currentTime=Math.max(0,player.currentTime-5)" title="-5s">&#9198;</button>
         <button class="transport-btn" id="playBtn" onclick="togglePlay()" title="播放/暂停">&#9654;</button>
         <button class="transport-btn" onclick="player.currentTime+=5" title="+5s">&#9197;</button>
+        <select class="speed-select transport-speed" id="speed" onchange="player.playbackRate=parseFloat(this.value)" title="播放速度">
+          <option value="0.5">0.5x</option>
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1.0x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2.0x</option>
+        </select>
         <span id="time">00:00 / 00:00</span>
       </div>
 
@@ -685,27 +826,6 @@ const html = `<!DOCTYPE html>
         </div>
       </div>
 
-      <!-- AI suggestions -->
-      <div class="sidebar-section">
-        <div class="card" id="suggestCard">
-          <div class="card-title">AI 建议</div>
-          <div id="suggestBody"></div>
-        </div>
-      </div>
-
-      <!-- Keyboard hints -->
-      <div class="sidebar-section">
-        <div class="card">
-          <div class="card-title">快捷键</div>
-          <div class="kbd-grid">
-            <kbd>Space</kbd><span>播放 / 暂停</span>
-            <kbd>D</kbd><span>双击选中（切换）</span>
-            <kbd>&larr; &rarr;</kbd><span>跳 1 秒</span>
-            <kbd>Shift + &larr;&rarr;</kbd><span>跳 5 秒</span>
-            <kbd>Shift + 拖动</kbd><span>批量选择 / 取消</span>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- Right panel -->
@@ -726,6 +846,19 @@ const html = `<!DOCTYPE html>
         <span class="filter-summary">已选 <span id="selCount">0</span> / <span id="totalCount">0</span></span>
       </div>
 
+      <!-- Shortcut strip -->
+      <div class="shortcut-strip">
+        <span class="shortcut-title">快捷键</span>
+        <div class="shortcut-list">
+          <span class="shortcut-item primary"><kbd>左键拖动</kbd><span>批量选择 / 取消</span></span>
+          <span class="shortcut-item"><kbd>双击</kbd><span>切换选中</span></span>
+          <span class="shortcut-item"><kbd>Space</kbd><span>播放 / 暂停</span></span>
+          <span class="shortcut-item"><kbd>&larr; &rarr;</kbd><span>跳 1 秒</span></span>
+          <span class="shortcut-item"><kbd>Shift + &larr;&rarr;</kbd><span>跳 5 秒</span></span>
+          <span class="shortcut-item"><kbd>&#8984;K</kbd><span>搜索</span></span>
+        </div>
+      </div>
+
       <!-- Transcript body -->
       <div class="transcript-body" id="transcriptBody">
         <div class="content" id="content"></div>
@@ -737,7 +870,7 @@ const html = `<!DOCTYPE html>
         <div class="legend-item"><span class="legend-swatch normal">保留</span><span>未选中</span></div>
         <div class="legend-item"><span class="legend-swatch playing">播放</span><span>当前词</span></div>
         <span style="color:var(--divider)">|</span>
-        <span>单击跳转 · 双击切换 · Shift+拖动批量</span>
+        <span>单击跳转 · 双击切换 · 左键拖动批量</span>
       </div>
     </div>
   </div>
@@ -765,8 +898,15 @@ const html = `<!DOCTYPE html>
     const content = document.getElementById('content');
     let elements = [];
     let isSelecting = false;
-    let selectStart = -1;
-    let selectMode = 'add';
+    const dragSelect = {
+      pending: false,
+      startIndex: -1,
+      lastIndex: -1,
+      mode: 'add',
+      startX: 0,
+      startY: 0,
+      snapshot: null
+    };
 
     // 当前激活的 filter
     let activeFilter = 'all';
@@ -785,6 +925,48 @@ const html = `<!DOCTYPE html>
       const s = (totalSec % 60).toFixed(1);
       if (m > 0) return \`\${m}分\${s}秒 (\${totalSec}s)\`;
       return \`\${s}秒\`;
+    }
+
+    function setSelected(i, shouldSelect) {
+      if (!words[i]) return;
+      if (shouldSelect) {
+        selected.add(i);
+        if (elements[i]) elements[i].classList.add('selected');
+      } else {
+        selected.delete(i);
+        if (elements[i]) elements[i].classList.remove('selected');
+      }
+    }
+
+    function applySelectionRange(from, to, mode) {
+      const min = Math.min(from, to);
+      const max = Math.max(from, to);
+      const shouldSelect = mode === 'add';
+      for (let j = min; j <= max; j++) {
+        setSelected(j, shouldSelect);
+      }
+      updateStats();
+    }
+
+    function restoreSelectionSnapshot(snapshot) {
+      selected.clear();
+      snapshot.forEach(i => selected.add(i));
+      elements.forEach((el, i) => {
+        if (el) el.classList.toggle('selected', selected.has(i));
+      });
+    }
+
+    function applyLiveSelectionRange(to) {
+      if (!dragSelect.snapshot) return;
+      restoreSelectionSnapshot(dragSelect.snapshot);
+      applySelectionRange(dragSelect.startIndex, to, dragSelect.mode);
+    }
+
+    function getIndexedTarget(e) {
+      const direct = e.target && e.target.closest ? e.target.closest('[data-index]') : null;
+      if (direct) return direct;
+      const atPoint = document.elementFromPoint(e.clientX, e.clientY);
+      return atPoint && atPoint.closest ? atPoint.closest('[data-index]') : null;
     }
 
     // ─── 章节分割（gap >= 1.5s） ───
@@ -809,7 +991,7 @@ const html = `<!DOCTYPE html>
       return chapters;
     }
 
-    // ─── AI 建议统计 ───
+    // ─── 预选分类统计 ───
     function categorize(i) {
       const w = words[i];
       if (w.isGap) return 'silence';
@@ -867,22 +1049,22 @@ const html = `<!DOCTYPE html>
 
           el.dataset.index = i;
 
-          // 单击跳转
-          el.onclick = (e) => {
-            if (!isSelecting) player.currentTime = word.start;
-          };
-
           // 双击选中/取消
           el.ondblclick = () => toggle(i);
 
-          // Shift+拖动
+          // 左键拖动批量选择；单击仍跳转
           el.onmousedown = (e) => {
-            if (e.shiftKey) {
-              isSelecting = true;
-              selectStart = i;
-              selectMode = selected.has(i) ? 'remove' : 'add';
-              e.preventDefault();
-            }
+            if (e.button !== 0) return;
+            isSelecting = false;
+            const mode = selected.has(i) ? 'remove' : 'add';
+            dragSelect.pending = true;
+            dragSelect.startIndex = i;
+            dragSelect.lastIndex = i;
+            dragSelect.mode = mode;
+            dragSelect.startX = e.clientX;
+            dragSelect.startY = e.clientY;
+            dragSelect.snapshot = new Set(selected);
+            e.preventDefault();
           };
 
           content.appendChild(el);
@@ -900,43 +1082,62 @@ const html = `<!DOCTYPE html>
 
       updateStats();
       updateFilterCounts();
-      updateSuggestCard();
     }
 
-    // Shift+拖动多选
+    // 左键拖动多选
     document.getElementById('content').addEventListener('mousemove', e => {
-      if (!isSelecting) return;
-      const target = e.target.closest('[data-index]');
+      if (!dragSelect.pending && !isSelecting) return;
+      if (e.buttons !== 1) {
+        finishDragSelect(false);
+        return;
+      }
+
+      const target = getIndexedTarget(e);
       if (!target) return;
 
       const i = parseInt(target.dataset.index);
-      const min = Math.min(selectStart, i);
-      const max = Math.max(selectStart, i);
+      const movedEnough = Math.abs(e.clientX - dragSelect.startX) > 3 || Math.abs(e.clientY - dragSelect.startY) > 3 || i !== dragSelect.startIndex;
 
-      for (let j = min; j <= max; j++) {
-        if (selectMode === 'add') {
-          selected.add(j);
-          if (elements[j]) { elements[j].classList.add('selected'); }
-        } else {
-          selected.delete(j);
-          if (elements[j]) { elements[j].classList.remove('selected'); }
-        }
+      if (!isSelecting) {
+        if (!movedEnough) return;
+        isSelecting = true;
+        applyLiveSelectionRange(dragSelect.startIndex);
       }
-      updateStats();
+
+      if (Number.isInteger(i) && i !== dragSelect.lastIndex) {
+        applyLiveSelectionRange(i);
+        dragSelect.lastIndex = i;
+      }
     });
 
     document.addEventListener('mouseup', () => {
-      if (isSelecting) rebuildSkipIntervals();
-      isSelecting = false;
+      finishDragSelect(true);
     });
 
+    function finishDragSelect(allowSingleClick) {
+      if (!dragSelect.pending && !isSelecting) return;
+      const wasSelecting = isSelecting;
+      const clickIndex = dragSelect.startIndex;
+
+      dragSelect.pending = false;
+      isSelecting = false;
+      dragSelect.startIndex = -1;
+      dragSelect.lastIndex = -1;
+      dragSelect.snapshot = null;
+
+      if (wasSelecting) {
+        rebuildSkipIntervals();
+      } else if (allowSingleClick && words[clickIndex]) {
+        player.currentTime = words[clickIndex].start;
+      }
+    }
+
     function toggle(i) {
+      finishDragSelect(false);
       if (selected.has(i)) {
-        selected.delete(i);
-        if (elements[i]) elements[i].classList.remove('selected');
+        setSelected(i, false);
       } else {
-        selected.add(i);
-        if (elements[i]) elements[i].classList.add('selected');
+        setSelected(i, true);
       }
       rebuildSkipIntervals();
       updateStats();
@@ -970,20 +1171,6 @@ const html = `<!DOCTYPE html>
       document.getElementById('fFiller').textContent = counts.filler;
       document.getElementById('fStutter').textContent = counts.stutter;
       document.getElementById('fRepeat').textContent = counts.repeat;
-    }
-
-    function updateSuggestCard() {
-      const counts = countByCategory();
-      const body = document.getElementById('suggestBody');
-      const items = [
-        { label: '静音', icon: '&#9208;', count: counts.silence },
-        { label: '语气词', icon: '&#128172;', count: counts.filler },
-        { label: '卡顿', icon: '&#9888;', count: counts.stutter },
-        { label: '重说', icon: '&#128260;', count: counts.repeat },
-      ];
-      body.innerHTML = items.map(it =>
-        \`<div class="suggest-row"><span class="label"><span>\${it.icon}</span> \${it.label}</span><span class="suggest-count">\${it.count}</span></div>\`
-      ).join('');
     }
 
     // ─── Filter ───

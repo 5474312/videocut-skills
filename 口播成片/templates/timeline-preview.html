@@ -21,6 +21,10 @@
       --violet: #705489;
       --radius: 8px;
       --shadow: 0 12px 34px rgba(28, 22, 14, .08);
+      --frame-width: 1620px;
+      --frame-height: 2160px;
+      --frame-ratio: 3 / 4;
+      --stage-scale: 1;
     }
 
     * { box-sizing: border-box; }
@@ -36,7 +40,7 @@
     }
 
     body {
-      padding: 22px;
+      padding: clamp(14px, 1.6vw, 22px);
     }
 
     button,
@@ -52,6 +56,7 @@
     }
 
     .app {
+      width: min(100%, 1500px);
       max-width: 1500px;
       margin: 0 auto;
     }
@@ -61,6 +66,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 18px;
+      flex-wrap: wrap;
       padding: 0 4px 18px;
     }
 
@@ -102,6 +108,7 @@
       justify-content: flex-end;
       gap: 9px;
       flex-wrap: wrap;
+      min-width: 0;
     }
 
     .stat {
@@ -137,19 +144,24 @@
 
     .workbench {
       display: grid;
-      grid-template-columns: 360px minmax(0, 1fr);
-      gap: 18px;
+      grid-template-columns: minmax(320px, min(36vw, 520px)) minmax(420px, 1fr);
+      gap: clamp(14px, 1.4vw, 20px);
       align-items: start;
     }
 
     .stage-column {
       min-width: 0;
+      position: sticky;
+      top: clamp(12px, 1.5vw, 22px);
+      align-self: start;
     }
 
     .stage-shell {
       position: relative;
-      width: 100%;
-      aspect-ratio: 3 / 4;
+      width: min(100%, 520px, calc((100vh - 154px) * .75));
+      min-width: 0;
+      margin: 0 auto;
+      aspect-ratio: var(--frame-ratio);
       overflow: hidden;
       border: 1px solid var(--line-strong);
       border-radius: var(--radius);
@@ -247,6 +259,22 @@
       background-size: contain;
     }
 
+    .stage-shell.module-render-mode #stage {
+      overflow: hidden;
+      background: #fffdf8;
+    }
+
+    .stage-shell.module-render-mode #stage iframe {
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: var(--frame-width);
+      height: var(--frame-height);
+      max-width: none;
+      max-height: none;
+      transform: scale(var(--stage-scale));
+      transform-origin: 0 0;
+    }
+
     #stage img {
       width: calc(100% - 32px);
       height: calc(100% - 32px);
@@ -280,7 +308,8 @@
     }
 
     .cue-card {
-      margin-top: 12px;
+      width: min(100%, 520px, calc((100vh - 154px) * .75));
+      margin: 12px auto 0;
       display: flex;
       align-items: flex-start;
       gap: 9px;
@@ -313,6 +342,10 @@
 
     .detail-panel {
       padding: 22px 26px 24px;
+      align-self: start;
+      max-height: calc(100vh - 104px);
+      overflow: auto;
+      container-type: inline-size;
     }
 
     .detail-head {
@@ -340,8 +373,8 @@
       line-height: 1.15;
       font-weight: 900;
       letter-spacing: 0;
-      word-break: keep-all;
-      overflow-wrap: normal;
+      word-break: normal;
+      overflow-wrap: anywhere;
     }
 
     .task {
@@ -383,7 +416,7 @@
 
     .review-body {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 240px;
+      grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
       gap: 16px;
       margin-top: 18px;
       align-items: start;
@@ -411,6 +444,13 @@
       border-radius: 5px;
       color: var(--muted);
       transition: color .15s ease, background .15s ease;
+    }
+
+    .clause-time {
+      margin-right: 6px;
+      color: var(--subtle);
+      font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+      white-space: nowrap;
     }
 
     .clause.past {
@@ -444,7 +484,7 @@
 
     .timeline-panel {
       margin-top: 18px;
-      padding: 16px 20px 20px;
+      padding: 16px clamp(14px, 1.6vw, 20px) 20px;
     }
 
     .segment-tabs {
@@ -494,6 +534,7 @@
       align-items: center;
       gap: 14px;
       margin-bottom: 13px;
+      min-width: 0;
     }
 
     #playButton {
@@ -644,12 +685,27 @@
       pointer-events: none;
     }
 
-    @media (max-width: 1080px) {
+    @container (max-width: 620px) {
+      .review-body { grid-template-columns: 1fr; }
+      .fields { grid-template-columns: 78px minmax(0, 1fr); }
+      .wide { grid-column: auto; }
+    }
+
+    @media (max-width: 860px) {
       body { padding: 16px; }
       .topbar { align-items: flex-start; flex-direction: column; }
       .stats { justify-content: flex-start; }
       .workbench { grid-template-columns: 1fr; }
-      .stage-shell { max-width: 420px; margin: 0 auto; }
+      .stage-column { position: static; }
+      .stage-shell,
+      .cue-card {
+        width: min(100%, 480px, calc((100vh - 140px) * .75));
+        max-width: 480px;
+      }
+      .detail-panel {
+        max-height: none;
+        overflow: visible;
+      }
       .review-body { grid-template-columns: 1fr; }
       .fields { grid-template-columns: 78px minmax(0, 1fr); }
       .wide { grid-column: auto; }
@@ -657,9 +713,30 @@
       .transport-right { margin-left: 0; justify-content: flex-start; }
     }
 
+    @media (max-width: 680px) {
+      .segment-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+      .tab {
+        flex: 0 0 auto;
+        max-width: 156px;
+      }
+      .timeline-panel {
+        overflow-x: auto;
+      }
+      .ruler,
+      .track {
+        min-width: 620px;
+      }
+    }
+
     @media (max-width: 560px) {
       body { padding: 14px; }
       h1 { font-size: 21px; }
+      .stage-shell,
+      .cue-card { width: 100%; }
       .detail-panel { padding: 20px; }
       .detail-head { flex-direction: column; }
       .detail-panel h2 { font-size: 25px; }
@@ -761,6 +838,11 @@
     const VIDEO_SRC = "{{SOURCE_VIDEO}}";
     const totalDuration = Number("{{TOTAL_DURATION}}");
     const NOTE_KEY = "{{NOTE_KEY}}";
+    const FRAME_WIDTH = Number("{{FRAME_WIDTH}}") || 1620;
+    const FRAME_HEIGHT = Number("{{FRAME_HEIGHT}}") || 2160;
+    document.documentElement.style.setProperty("--frame-width", `${FRAME_WIDTH}px`);
+    document.documentElement.style.setProperty("--frame-height", `${FRAME_HEIGHT}px`);
+    document.documentElement.style.setProperty("--frame-ratio", `${FRAME_WIDTH} / ${FRAME_HEIGHT}`);
     const CLIP_COLORS = ["#2f6f66", "#705c3a", "#446b89", "#755b81", "#8a5d55", "#5f7448"];
 
     const scenes = {{SCENES_JSON}};
@@ -845,8 +927,23 @@
         scenes[0];
     }
 
+    function timelineControlledUrl(url) {
+      if (!url) return "";
+      const [withoutHash, hash = ""] = String(url).split("#");
+      const [path, query = ""] = withoutHash.split("?");
+      const params = new URLSearchParams(query);
+      params.delete("play");
+      params.delete("static");
+      params.set("timeline", "1");
+      params.set("render", "1");
+      const nextQuery = params.toString();
+      return `${path}${nextQuery ? `?${nextQuery}` : ""}${hash ? `#${hash}` : ""}`;
+    }
+
     function sceneUrl(scene) {
-      return scene.src || scene.module || "";
+      const url = scene.src || scene.module || "";
+      if (scene.kind === "module" || scene.kind === "iframe") return timelineControlledUrl(url);
+      return url;
     }
 
     function splitTranscript(scene) {
@@ -857,19 +954,39 @@
       return parts.length ? parts : [scene.transcript];
     }
 
-    function renderTranscript(scene, time) {
+    function timedTranscriptParts(scene) {
+      const cues = (scene.stepCues || [])
+        .filter(cue => cue.text && !/段落收束/.test(cue.text));
+      if (cues.length) {
+        return cues.map((cue, index) => ({
+          text: cue.text,
+          start: cue.at,
+          end: cues[index + 1]?.at ?? scene.end
+        }));
+      }
       const parts = splitTranscript(scene);
       const duration = Math.max(.1, scene.end - scene.start);
       const each = duration / parts.length;
+      return parts.map((text, index) => ({
+        text,
+        start: scene.start + each * index,
+        end: index === parts.length - 1 ? scene.end : scene.start + each * (index + 1)
+      }));
+    }
+
+    function renderTranscript(scene, time) {
+      const parts = timedTranscriptParts(scene);
       detail.transcript.innerHTML = "";
-      parts.forEach((text, index) => {
-        const start = scene.start + each * index;
-        const end = index === parts.length - 1 ? scene.end : scene.start + each * (index + 1);
+      parts.forEach(part => {
         const span = document.createElement("span");
         span.className = "clause";
-        if (time >= start && time < end) span.classList.add("active");
-        else if (time >= end) span.classList.add("past");
-        span.textContent = text;
+        if (time >= part.start && time < part.end) span.classList.add("active");
+        else if (time >= part.end) span.classList.add("past");
+        const timeLabel = document.createElement("span");
+        timeLabel.className = "clause-time";
+        timeLabel.textContent = formatTime(part.start);
+        span.appendChild(timeLabel);
+        span.append(part.text);
         detail.transcript.appendChild(span);
       });
     }
@@ -886,7 +1003,7 @@
 
     function dynamicCue(scene, time) {
       const stepCue = currentStepCue(scene, time);
-      if (stepCue) return `当前动画 step ${stepCue.step} · ${scene.cue}`;
+      if (stepCue) return `${formatTime(stepCue.at)} · ${stepCue.text || scene.cue}`;
       if ((scene.kind === "module" || scene.kind === "iframe") && (scene.steps || 1) > 1) {
         return `当前动画 step ${stepForScene(scene, time)} · ${scene.cue}`;
       }
@@ -913,6 +1030,15 @@
       segmentNote.value = noteState[scene.id] || "";
     }
 
+    function resizeModuleFrame() {
+      const stageShell = document.querySelector(".stage-shell");
+      if (!stageShell) return;
+      const scale = Math.min(stageShell.clientWidth / FRAME_WIDTH, stageShell.clientHeight / FRAME_HEIGHT);
+      stageShell.style.setProperty("--stage-scale", String(Number.isFinite(scale) && scale > 0 ? scale : 1));
+    }
+
+    window.addEventListener("resize", resizeModuleFrame);
+
     function renderStage(scene) {
       if (currentScene && currentScene.id === scene.id) return;
       currentScene = scene;
@@ -923,9 +1049,12 @@
       stageFrame = null;
       const stageShell = document.querySelector(".stage-shell");
       const useVideoWindow = scene.kind === "video" && scene.videoLayout === "window";
+      const isModuleScene = scene.kind === "module" || scene.kind === "iframe";
       stageShell.classList.toggle("video-window-mode", useVideoWindow);
       stageShell.classList.toggle("image-small-mode", scene.kind === "image" && scene.imageLayout === "small");
       stageShell.classList.toggle("image-side-border-mode", scene.kind === "image" && scene.imageLayout === "side-border");
+      stageShell.classList.toggle("module-render-mode", isModuleScene);
+      resizeModuleFrame();
 
       if (scene.kind === "video") {
         stageCanvas = document.createElement("canvas");
@@ -950,6 +1079,10 @@
         stageFrame = document.createElement("iframe");
         stageFrame.src = sceneUrl(scene);
         stageFrame.title = scene.title;
+        stageFrame.addEventListener("load", () => {
+          resizeModuleFrame();
+          syncModuleFrame(scene, displayTime);
+        }, { once: true });
         stage.appendChild(stageFrame);
       }
 
@@ -1017,6 +1150,13 @@
       return Math.min((scene.steps || 1) - 1, Math.floor(progress * (scene.steps || 1)));
     }
 
+    function syncModuleFrame(scene, time) {
+      if (!(scene.kind === "module" || scene.kind === "iframe") || !stageFrame || !stageFrame.contentWindow) return;
+      const step = stepForScene(scene, time);
+      try { stageFrame.contentWindow.__VIDEO_CURRENT_TIME__ = time; } catch (_) {}
+      stageFrame.contentWindow.postMessage({ type: "set-step", step, time }, "*");
+    }
+
     function syncStage(time) {
       displayTime = Math.max(0, Math.min(totalDuration, Number(time || 0)));
       time = displayTime;
@@ -1029,11 +1169,7 @@
       timeNow.textContent = formatTime(time);
 
       if (scene.kind === "video") drawClockFrame();
-      if ((scene.kind === "module" || scene.kind === "iframe") && stageFrame && stageFrame.contentWindow) {
-        const step = stepForScene(scene, time);
-        try { stageFrame.contentWindow.__VIDEO_CURRENT_TIME__ = time; } catch (_) {}
-        stageFrame.contentWindow.postMessage({ type: "set-step", step, time }, "*");
-      }
+      syncModuleFrame(scene, time);
       updateCueNodes(scene, time);
     }
 
@@ -1108,6 +1244,7 @@
             node.className = "cue-node";
             node.dataset.scene = scene.id;
             node.dataset.step = String(cue.step);
+            node.dataset.at = String(cue.at);
             node.style.left = `${(cue.at / totalDuration) * 100}%`;
             cueNodes.appendChild(node);
           }
@@ -1127,11 +1264,11 @@
 
     function updateCueNodes(scene, time) {
       const activeStep = stepForScene(scene, time);
+      const activeCue = currentStepCue(scene, time);
       document.querySelectorAll(".cue-node").forEach(node => {
-        node.classList.toggle(
-          "active",
-          node.dataset.scene === scene.id && Number(node.dataset.step) === activeStep
-        );
+        const isCueMatch = activeCue && node.dataset.at && Number(node.dataset.at) === activeCue.at;
+        const isStepMatch = !activeCue && Number(node.dataset.step) === activeStep;
+        node.classList.toggle("active", node.dataset.scene === scene.id && (isCueMatch || isStepMatch));
       });
     }
 

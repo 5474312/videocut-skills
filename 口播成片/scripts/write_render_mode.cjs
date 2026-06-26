@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const fs = require("fs");
 const path = require("path");
+const { loadUserConfig, renderSummary } = require("./user_config.cjs");
 
 function parseArgs(argv) {
   const args = {};
@@ -21,8 +22,15 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv);
 const projectDir = path.resolve(args["project-dir"] || ".");
-const filePattern = new RegExp(args.pattern || "^module-.*\\.html$");
+const filePattern = new RegExp(args.pattern || "^(module|xiaohei)-.*\\.html$");
 const renderModePath = path.join(projectDir, "render-mode.js");
+const userConfig = loadUserConfig({
+  configPath: args.config,
+  aspectRatio: args["aspect-ratio"] || args.ratio,
+});
+const width = Number(args.width || userConfig.width);
+const height = Number(args.height || userConfig.height);
+const background = args.background || "#f3ecdd";
 
 const renderModeSource = `(() => {
   const params = new URLSearchParams(window.location.search);
@@ -33,14 +41,14 @@ const renderModeSource = `(() => {
   style.textContent = \`
     html,
     body {
-      width: 1080px !important;
-      height: 1440px !important;
-      min-height: 1440px !important;
+      width: ${width}px !important;
+      height: ${height}px !important;
+      min-height: ${height}px !important;
       margin: 0 !important;
       padding: 0 !important;
       overflow: hidden !important;
       display: block !important;
-      background: #f3ecdd !important;
+      background: ${background} !important;
     }
 
     body {
@@ -50,19 +58,50 @@ const renderModeSource = `(() => {
       gap: 0 !important;
     }
 
-    body > :not(.screen) {
+    body > :not(.screen):not(.stage) {
       display: none !important;
     }
 
-    .screen {
+    .screen,
+    body > .stage {
       position: absolute !important;
       inset: 0 !important;
-      width: 1080px !important;
-      height: 1440px !important;
-      min-width: 1080px !important;
+      width: ${width}px !important;
+      height: ${height}px !important;
+      min-width: ${width}px !important;
+      min-height: ${height}px !important;
       max-width: none !important;
+      max-height: none !important;
       aspect-ratio: auto !important;
       margin: 0 !important;
+      overflow: hidden !important;
+    }
+
+    body > .stage {
+      display: grid !important;
+      place-items: center !important;
+    }
+
+    .screen > .stage {
+      width: ${width}px !important;
+      height: ${height}px !important;
+      max-width: none !important;
+      max-height: none !important;
+    }
+
+    .stage > *,
+    .photo-frame,
+    .chart-frame,
+    .image-frame,
+    .shot-frame,
+    .dashboard-frame,
+    .diagram,
+    .table-wrap,
+    .cards,
+    .board,
+    .wrap {
+      max-width: none !important;
+      max-height: none !important;
     }
 
     *,
@@ -82,6 +121,8 @@ if (!fs.existsSync(projectDir)) {
   process.exit(1);
 }
 
+console.log(`[config] ${userConfig.configPath}`);
+console.log(`[ratio] ${renderSummary(userConfig)}`);
 fs.writeFileSync(renderModePath, renderModeSource);
 console.log(`[write] ${renderModePath}`);
 

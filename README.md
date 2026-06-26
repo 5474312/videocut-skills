@@ -146,7 +146,13 @@ Agent 基于剪后视频重新转写，并校对成最终字幕
 | Node.js 18+ | 运行安装器和脚本 |
 | FFmpeg | 音视频处理 |
 | curl | API 请求 |
-| 火山引擎语音识别 API Key | 口播转录 |
+| 火山引擎录音文件识别 2.0 API Key | 口播转录 |
+
+如果还没有火山 API Key，先打开这个页面注册 / 开通“录音文件识别 2.0”，并创建 API Key：
+
+```text
+https://console.volcengine.com/speech/new/setting/activate?projectName=default
+```
 
 安装后复制环境变量模板：
 
@@ -187,10 +193,15 @@ chengfeng-videocut-skills/
 │   │   └── timeline-preview.html
 │   ├── references/
 │   └── scripts/
-└── 自进化/
-    ├── SKILL.md
-    └── README.md
+├── 自进化/
+│   ├── SKILL.md
+│   └── README.md
+└── skillhub/
+    └── chengfeng-videocut-skills/
+        └── SKILL.md
 ```
+
+`skillhub/chengfeng-videocut-skills/` 只作为小红书 SkillHub 下载入口，内容保持极简；完整说明仍以本 README 和 GitHub 仓库为准。
 
 `剪口播/scripts/` 里的关键脚本：
 
@@ -238,6 +249,12 @@ npx chengfeng-videocut-skills install
 ```
 
 GitHub 才是源码和文档的真相源。更新 Skill 内容时，通常只需要推 GitHub；只有安装器本身变了，才需要重新发布 npm。
+
+## 本地开发入口
+
+本机开发时，`.claude/skills/` 放 Skill 本源；`.agents/skills/` 只作为 Codex / Agent 入口，应该用相对软链接指向 `.claude/skills/` 里的对应目录。
+
+不要在 `.agents/skills/` 里维护同名 Skill 副本。更新规则、脚本、模板、素材索引时，只改 `.claude/skills/` 本源，再让 `.agents/skills/` 的软链接读取同一份内容。
 
 ## 协议
 
