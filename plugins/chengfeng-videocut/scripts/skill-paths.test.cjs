@@ -4,6 +4,10 @@ const root = path.resolve(__dirname, "..");
 const concreteSkills = ["chengfeng-cut-talking-head", "chengfeng-finish-talking-head", "chengfeng-report-videocut-bug", "chengfeng-check-videocut-updates"];
 const hubSkill = "chengfeng-videocut";
 const publicSkills = [hubSkill, ...concreteSkills];
+const pluginManifest = JSON.parse(fs.readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"));
+assert.ok(Array.isArray(pluginManifest.interface?.defaultPrompt), "Plugin home starter prompts must be an array");
+assert.ok(pluginManifest.interface.defaultPrompt.length <= 3, "Codex supports at most 3 Plugin-home starter prompts");
+assert.match(pluginManifest.interface.defaultPrompt[0], /\$chengfeng-videocut:chengfeng-videocut/, "first Plugin-home prompt must offer the explicit hub");
 for (const name of publicSkills) {
   const text = fs.readFileSync(path.join(root, "skills", name, "SKILL.md"), "utf8");
   assert.match(text, new RegExp(`^name: ${name}$`, "m"), `${name} must match its directory and frontmatter`);
@@ -27,4 +31,4 @@ const hubAgent = fs.readFileSync(path.join(root, "skills", hubSkill, "agents", "
 assert.match(hubAgent, /\$chengfeng-videocut:chengfeng-videocut/, "hub default prompt must use its full Plugin namespace");
 assert.match(hubAgent, /allow_implicit_invocation: false/, "hub must remain an explicit routing entry");
 assert.deepEqual(fs.readdirSync(path.join(root, "skills")).sort(), publicSkills.slice().sort(), "only the five prefixed public skills may be discovered");
-console.log(JSON.stringify({ fiveSkills: true, manualEntryContract: true, namespacedDefaultPrompts: true, hubHasNoRuntimeOwnership: true, skillDirAssumptionRemoved: true, explicitPluginRootContract: true }));
+console.log(JSON.stringify({ fiveSkills: true, manualEntryContract: true, pluginStarterPromptCap: true, namespacedDefaultPrompts: true, hubHasNoRuntimeOwnership: true, skillDirAssumptionRemoved: true, explicitPluginRootContract: true }));
