@@ -1,7 +1,7 @@
 {
   "name": "chengfeng-videocut",
-  "version": "0.3.0",
-  "description": "Two talking-head video workflows plus safe bug-reporting and Marketplace-update support for chengfeng-videocut.",
+  "version": "0.3.1",
+  "description": "Five manually selectable chengfeng-videocut Skills: one router, two talking-head workflows, safe bug reporting, and Marketplace update checks.",
   "author": {
     "name": "Chengfeng",
     "url": "https://github.com/Agentchengfeng"
