@@ -12,6 +12,12 @@ const publicSkills = [
   "chengfeng-report-videocut-bug",
   "chengfeng-check-videocut-updates",
 ];
+const displayNames = {
+  "chengfeng-cut-talking-head": "chengfeng · 剪口播",
+  "chengfeng-finish-talking-head": "chengfeng · 口播成片",
+  "chengfeng-report-videocut-bug": "chengfeng · 上报 Bug",
+  "chengfeng-check-videocut-updates": "chengfeng · 检查更新",
+};
 const pluginManifest = JSON.parse(fs.readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"));
 
 assert.equal(pluginManifest.name, pluginName, "Plugin manifest must own the root name");
@@ -37,6 +43,7 @@ for (const name of publicSkills) {
   assert.match(text, /test -n "\$PLUGIN_ROOT" && test -f "\$PLUGIN_ROOT\/.codex-plugin\/plugin\.json"/, `${name} must validate the resolved root`);
   const agent = fs.readFileSync(path.join(root, "skills", name, "agents", "openai.yaml"), "utf8");
   assert.match(agent, new RegExp(`\\$${pluginName}:${name}`), `${name} must use its full Plugin namespace in the default prompt`);
+  assert.match(agent, new RegExp(`^  display_name: "${displayNames[name]}"$`, "m"), `${name} must expose the searchable chengfeng display name`);
 }
 
 const runtimeContract = fs.readFileSync(path.join(root, "references", "runtime-and-product-contract.md"), "utf8");
@@ -59,4 +66,5 @@ console.log(JSON.stringify({
   hostManualSelectionMetadata: true,
   skillDirAssumptionRemoved: true,
   explicitBusinessContract: true,
+  searchableChengfengDisplayNames: true,
 }));

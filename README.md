@@ -17,7 +17,7 @@ Plugin 根名  -> 安装与 UI 群组名，不是同名 Skill
 
 ## 安装
 
-当前公开 Plugin P 是 `36fc88de3c11866140ef3183bfc12873f9e13e52`（`0.5.0`）。直接使用 Codex Marketplace 安装：
+当前公开 Plugin P 是 `0.5.1`；发布后将由 Bootstrap manifest 固定其不可变 40-hex commit。直接使用 Codex Marketplace 安装：
 
 ```bash
 codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 36fc88de3c11866140ef3183bfc12873f9e13e52
@@ -57,7 +57,7 @@ Runtime 默认安装到：
 ~/.chengfeng-videocut
 ```
 
-Plugin 0.5.0 的产品合同仍固定为 `v0.2.0` Release、Runtime 0.2.0+ EDL 与用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。首次安装会从这个精确 Release 下载 `install.sh` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退 v0.1.1。
+Plugin 0.5.1 的产品合同仍固定为 `v0.2.0` Release、Runtime 0.2.0+ EDL 与用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。首次安装会从这个精确 Release 下载 `install.sh` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退 v0.1.1。
 
 每个业务流程在第一次产品 API 前、每次人工审核恢复前都会执行共享 `ensure-running`：
 
@@ -173,13 +173,13 @@ chengfeng-videocut-skills/
 
 ## 发布边界
 
-公开 Runtime v0.1.1 不满足 Plugin 0.5.0 的合同，不能再作为自动安装目标。稳定发布顺序必须是：
+公开 Runtime v0.1.1 不满足 Plugin 0.5.1 的合同，不能再作为自动安装目标。稳定发布顺序必须是：
 
 ```text
 Runtime v0.2.0 Release
   -> install.sh 与产品包进入 SHA256SUMS
   -> 隔离环境首次安装 / doctor / Studio capability / 两条工作流 E2E
-  -> Plugin 0.5.0 Marketplace 发布
+  -> Plugin 0.5.1 Marketplace 发布
 ```
 
 在 Runtime v0.2.0 补齐云端 transcribe/import、内置 renderer 并完成真实项目 E2E 前，不把“两条工作流已经完全自动化”作为公开承诺。
