@@ -1,6 +1,0 @@
-interface:
-  display_name: "chengfeng-videocut 基础规则"
-  short_description: "为剪口播、成片、问题上报和更新检查提供共同产品边界与分发规则"
-  default_prompt: "使用 $chengfeng-videocut:chengfeng-videocut-basics 了解 chengfeng-videocut 的共同边界。"
-policy:
-  allow_implicit_invocation: true

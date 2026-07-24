@@ -27302,7 +27302,7 @@ var optionSchema = exports_external.object({
   description: exports_external.string(),
   nextStep: exports_external.string()
 });
-var server = new McpServer({ name: "chengfeng-videocut", version: "0.4.1" });
+var server = new McpServer({ name: "chengfeng-videocut", version: "0.5.0" });
 ak(server, "workflow-confirm-card", templateUri, {}, async () => ({
   contents: [{
     uri: templateUri,

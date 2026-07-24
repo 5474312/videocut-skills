@@ -18,7 +18,9 @@ source_cut.mp4 + subtitles.srt
         final.mp4 + verification.json
 ```
 
-## 0. 每次先做 Runtime 预检
+先读取并执行 [两个业务 Skill 的阶段合同](../../references/business-workflow-contract.md)。本 Skill 只在已有 Product `projectId` 上续跑，不创建项目、不导入素材、不建立上传会话或素材库；任何一次续跑都保持固定阶段：`preflight -> Product state readback -> proposal -> Product CAS -> project-level review binding -> user confirmation -> Product execution -> outcome verification`。
+
+## 0. preflight：每次先做 Runtime 预检
 
 ```bash
 PLUGIN_ROOT="$(codex plugin list --json | node -e 'let s=""; process.stdin.on("data", c => s += c); process.stdin.on("end", () => { const rows = JSON.parse(s).installed || []; const hit = rows.filter(x => x.enabled && x.name === "chengfeng-videocut" && x.source && x.source.path); if (hit.length !== 1) process.exit(1); process.stdout.write(hit[0].source.path); });')"
@@ -43,7 +45,7 @@ node "$RUNNING" --json
 
 只有脚本确认服务 `healthy=true`、`runtimeMode=launchd`、版本兼容、PID 有效且 URL 为 canonical 5190 入口后，才继续。失败时透传 Product 的结构化错误并停止；禁止回退 foreground、换端口或杀未知进程。
 
-## 1. 检查基础素材包
+## 1. Product state readback：检查基础素材包
 
 ```bash
 node "$VC" workflow get "$jobDir" --json
@@ -61,7 +63,7 @@ node "$VC" workflow get "$jobDir" --json
 
 若缺失，切换到 `$chengfeng-videocut:chengfeng-cut-talking-head` 完成前置剪辑，再以同一个 `projectId` 恢复本 Skill。不要新增业务状态机或第二个项目。
 
-## 2. 读取项目配置
+## 2. 读取项目配置并准备 proposal
 
 比例、动画风格与额外要求必须来自当前项目状态；不要读取所有项目共享的可变全局默认值。用户尚未选择时，只询问会实质改变成片的必要信息。
 
@@ -75,7 +77,7 @@ node "$VC" workflow get "$jobDir" --json
 
 用户确认配置后，用最新 revision 执行 `start-final`。每一步都重新读取 revision，不能连续复用旧值。
 
-## 3. 分镜候选 → 审核
+## 3. proposal → Product CAS：分镜候选
 
 先读 [分镜规则](references/storyboard-rules.md)。按字幕语义分段，候选段落绑定稳定 `wordIds`，再通过产品校验发布：
 
@@ -96,15 +98,17 @@ node "$VC" open "$jobDir" --json
 node "$STUDIO" --url "$productUrl" --view "$reviewView" --json
 ```
 
-只有对应状态进入 `*_review_ready`、能力门禁返回 `ok=true`，才打开 `studio.url`。storyboard 使用 `reviewView=storyboard`，animation 与 timeline 使用 `reviewView=preview`。用户保存审核结果后，先再次执行 `node "$RUNNING" --json`，再调用 `show_workflow_confirmation`。卡片回传 `action=continue_finish_storyboard` 或 `action=return_finish_storyboard` 时都先执行：
+## 3.1 project-level review binding：分镜审核
+
+只有对应状态进入 `*_review_ready`、能力门禁返回 `ok=true`，才打开 `studio.url`。打开前必须把 Product URL 的 `#project/<projectId>` 与 workflow readback `projectId` 严格比对，并把当前 workflow stage、Project / EditList revision 和本阶段 artifact revision 绑定到审核；能力门禁 PASS 只证明产品面存在，不能替代项目级绑定。storyboard 使用 `reviewView=storyboard`，animation 与 timeline 使用 `reviewView=preview`。用户保存审核结果后，先再次执行 `node "$RUNNING" --json`，再调用 `show_workflow_confirmation`。卡片回传 `action=continue_finish_storyboard` 或 `action=return_finish_storyboard` 时都先执行：
 
 ```bash
 node "$RUNNING" --json
 ```
 
-`continue_finish_storyboard` 重新校验 revision 后执行 `confirm-storyboard`；`return_finish_storyboard` 回到同一项目的 storyboard 审核页，不推进状态。
+`continue_finish_storyboard` 重新 Product readback 并逐项校验绑定 revision 后执行 `confirm-storyboard`；`return_finish_storyboard` 回到同一项目的 storyboard 审核页，不推进状态。
 
-## 4. 动画候选 → 审核
+## 4. proposal → Product CAS → project-level review binding：动画候选与审核
 
 先读 [动画规则](references/animation-rules.md)；需要 HTML 模块时再读 [动画模块契约](references/animation-module-contract.md)。
 
@@ -119,9 +123,9 @@ node "$RUNNING" --json
 node "$RUNNING" --json
 ```
 
-`continue_finish_animation` 校验 revision 后执行 `confirm-animation`；`return_finish_animation` 回到同一项目的动画审核页，不推进状态。
+`continue_finish_animation` 重新 Product readback 并校验 URL/hash projectId、stage、Project / EditList / artifact revisions 后执行 `confirm-animation`；`return_finish_animation` 回到同一项目的动画审核页，不推进状态。
 
-## 5. 时间线候选 → 审核
+## 5. proposal → Product CAS → project-level review binding：时间线候选与审核
 
 先读 [时间线与导出](references/timeline-and-export.md)。最终时间线只消费剪后时间、真实字幕与已审核模块：
 
@@ -140,9 +144,9 @@ node "$VC" artifact put "$jobDir" \
 node "$RUNNING" --json
 ```
 
-`continue_finish_timeline` 确认 revision 仍一致后执行 `confirm-timeline`；`return_finish_timeline` 回到同一项目的时间线审核页，不推进状态。
+`continue_finish_timeline` 重新 Product readback 并校验 URL/hash projectId、stage、Project / EditList / artifact revisions 后执行 `confirm-timeline`；`return_finish_timeline` 回到同一项目的时间线审核页，不推进状态。
 
-## 6. 产品导出与验收
+## 6. user confirmation → Product execution → outcome verification：产品导出与验收
 
 最终导出必须由 Runtime 自己完成；Skill 不携带 renderer，也不传旧 Skill 脚本路径：
 
@@ -163,6 +167,8 @@ node "$VC" render run "$jobDir" \
 - 时长与时间线在容差内；
 - 关键帧无黑边、遮挡、错误素材或幽灵字幕；
 - `renders/verification.json` 的 `passed=true`。
+
+报告必须明确证据等级：Product 的 stage / revision / `verification.json` 相符是 **API/readback PASS**；只有在 Codex 内置浏览器打开同一 `#project/<projectId>` 和绑定 revision 观察真实画面，才是 **visual frame PASS**；没有人实际比较听感时固定写 **human listening UNVERIFIED**。自动播放、静音、截图、DOM 或流解码不能替代人工听音。
 
 ## 确认与恢复规则
 
@@ -186,3 +192,4 @@ confirmed transition
 - `return_finish_*` 必须先执行 `node "$RUNNING" --json`，再返回对应审核视图；`pause_workflow` 保存后停止。
 - `revision_conflict` 必须重新读状态，不能静默覆盖。
 - “能播放预览”不等于“成片已导出”。
+- 本次不实现一次性 confirmation receipt；确认仍绑定明确 action 与 Product revisions。

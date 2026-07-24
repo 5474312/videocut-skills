@@ -6,14 +6,12 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const pluginName = "chengfeng-videocut";
-const basicsSkill = "chengfeng-videocut-basics";
-const concreteSkills = [
+const publicSkills = [
   "chengfeng-cut-talking-head",
   "chengfeng-finish-talking-head",
   "chengfeng-report-videocut-bug",
   "chengfeng-check-videocut-updates",
 ];
-const publicSkills = [basicsSkill, ...concreteSkills];
 const pluginManifest = JSON.parse(fs.readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"));
 
 assert.equal(pluginManifest.name, pluginName, "Plugin manifest must own the root name");
@@ -31,7 +29,7 @@ for (const name of publicSkills) {
   assert.match(text, /^user-invocable: true$/m, `${name} must retain the host-compatible manual-selection metadata`);
 }
 
-for (const name of concreteSkills) {
+for (const name of publicSkills) {
   const text = fs.readFileSync(path.join(root, "skills", name, "SKILL.md"), "utf8");
   assert.doesNotMatch(text, /\$SKILL_DIR|SKILL_DIR=/, `${name} must not require an injected SKILL_DIR`);
   assert.match(text, /codex plugin list --json/, `${name} must resolve the enabled plugin via Codex`);
@@ -41,22 +39,23 @@ for (const name of concreteSkills) {
   assert.match(agent, new RegExp(`\\$${pluginName}:${name}`), `${name} must use its full Plugin namespace in the default prompt`);
 }
 
-const basics = fs.readFileSync(path.join(root, "skills", basicsSkill, "SKILL.md"), "utf8");
-assert.match(basics, /Plugin `chengfeng-videocut` 是安装与 UI 群组名称/, "basics must reserve the Plugin root for the Plugin group");
-assert.match(basics, /\$chengfeng-videocut:chengfeng-cut-talking-head/, "basics must link the cut Skill by full public ID");
-assert.match(basics, /\$chengfeng-videocut:chengfeng-finish-talking-head/, "basics must link the finish Skill by full public ID");
-assert.doesNotMatch(basics, /codex plugin list --json|ensure-runtime\.cjs|ensure-running\.cjs|ensure-studio\.cjs|videocut-cli\.cjs/, "basics must not own Runtime or Product execution");
-const basicsAgent = fs.readFileSync(path.join(root, "skills", basicsSkill, "agents", "openai.yaml"), "utf8");
-assert.match(basicsAgent, /\$chengfeng-videocut:chengfeng-videocut-basics/, "basics default prompt must use its full Plugin namespace");
-assert.match(basicsAgent, /allow_implicit_invocation: true/, "basics may provide shared routing context");
+const runtimeContract = fs.readFileSync(path.join(root, "references", "runtime-and-product-contract.md"), "utf8");
+const businessContract = fs.readFileSync(path.join(root, "references", "business-workflow-contract.md"), "utf8");
+assert.match(runtimeContract, /普通内部 reference/, "shared Product boundaries must be an internal reference");
+assert.match(businessContract, /不是用户可调用的 Skill/, "shared business workflow must not be user-facing");
+assert.doesNotMatch(
+  `${runtimeContract}\n${businessContract}`,
+  /^name:\s+chengfeng-videocut-basics$/m,
+  "internal references must not declare the retired Skill",
+);
 
-assert.deepEqual(fs.readdirSync(path.join(root, "skills")).sort(), publicSkills.slice().sort(), "only the five prefixed, non-shadowing Skills may be discovered");
+assert.deepEqual(fs.readdirSync(path.join(root, "skills")).sort(), publicSkills.slice().sort(), "only the four task-facing Skills may be discovered");
 console.log(JSON.stringify({
-  fiveSkills: true,
+  fourTaskFacingSkills: true,
   pluginRootUnshadowed: true,
   pluginStarterPromptCap: true,
   namespacedDefaultPrompts: true,
-  basicsHasNoRuntimeOwnership: true,
+  sharedRulesAreInternalReferences: true,
   hostManualSelectionMetadata: true,
   skillDirAssumptionRemoved: true,
   explicitBusinessContract: true,

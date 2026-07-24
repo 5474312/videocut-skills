@@ -14,6 +14,8 @@ source_cut.mp4 + subtitles.srt
 
 Skill 做语义判断与编排；产品 Runtime 是项目、Cuts、媒体剪切和 Studio 状态的唯一写入者。
 
+先读取并执行 [两个业务 Skill 的阶段合同](../../references/business-workflow-contract.md)。本 Skill 的任何一次续跑也必须保持其中的固定阶段：`preflight -> Product state readback -> proposal -> Product CAS -> project-level review binding -> user confirmation -> Product execution -> outcome verification`。
+
 ## 0. 每次先做 Runtime 预检
 
 从 Codex 已启用 Plugin 列表精确取得 `chengfeng-videocut` 的 `source.path`。`SKILL_DIR` 不是 Codex 保证注入的变量；禁止依赖它、硬编码开发机路径或用 `find` 猜测安装目录：
@@ -39,7 +41,7 @@ node "$ENSURE" --install-if-missing --json
 
 详细协议见 [Runtime 与产品契约](../../references/runtime-and-product-contract.md)。
 
-## 1. 接受真实输入
+## 1. preflight：接受真实输入并直接 Product 建档
 
 只接受用户给出的真实口播视频或现有真实项目。没有真实媒体就停止；禁止用示例、占位视频或浏览器里的其他项目顶替。
 
@@ -67,7 +69,7 @@ node "$VC" project create "$jobDir" \
 
 `--video` 与 `--transcript` 必须是任务目录内的真实文件；`aspectRatio` 只能是 `3:4 / 4:3 / 16:9`，未指定时按产品默认 `4:3`。已有规范项目先用 `inspect` 确认并复用；不要重复创建 `projectId`。只有恢复 `cut_prepare_running` 或明确刷新已有任务时才使用 `project prepare`。
 
-项目建档后、第一次 Cuts API 前，让 Product 声明式确保常驻服务；脚本只调用 `service ensure --json`，不自行管理进程：
+`project create` 是本地真实视频和云端逐词稿进入 Product 的直接入口；不经过素材库、material-library、上传会话、导入 flow 或额外 Skill。创建成功后仍处于 preflight：在所有 state readback 和 Cuts API 前，让 Product 声明式确保常驻服务；脚本只调用 `service ensure --json`，不自行管理进程：
 
 ```bash
 node "$RUNNING" --json
@@ -75,7 +77,16 @@ node "$RUNNING" --json
 
 只有脚本确认服务 `healthy=true`、`runtimeMode=launchd`、版本兼容、PID 有效且 URL 为 canonical 5190 入口后，才继续。失败时透传 Product 的结构化错误并停止；禁止回退 foreground、换端口或杀未知进程。
 
-## 2. 生成并提交删词候选
+随后进行 **Product state readback**，再产生任何语义候选：
+
+```bash
+node "$VC" workflow get "$jobDir" --json
+node "$VC" cuts get "$jobDir" --json
+```
+
+两份 readback 必须指向同一个 Product 返回的 `projectId`，并保存当前 workflow stage、Project / Cuts / EditList revisions；缺失或不一致时停止，禁止猜测或用本地文件补齐。
+
+## 2. proposal → Product CAS：生成并提交删词候选
 
 先读 [语义删除规则](references/semantic-deletion.md)。候选只引用稳定 `wordIds`：
 
@@ -109,7 +120,9 @@ node "$VC" cuts set "$jobDir" \
 
 `cuts get.data.revision` 是 `cut-selection.json` 的 revision；`workflow get.data.revision` 是 `project.json` 的 revision。两者禁止混用。
 
-## 3. 到人工审核时才打开 Studio
+`cuts set` 返回成功后，立即再次 `workflow get` 与 `cuts get`，确认 Product readback 的 `projectId`、`cut_review_ready`、Project / Cuts / EditList revisions；CAS 返回或读回不一致即停止并重新审核，绝不直接写 JSON 或自动覆盖。
+
+## 3. project-level review binding：到人工审核时才打开 Studio
 
 只有 transcript 与 Cuts 已落盘、工作流已经进入 `cut_review_ready`，才准备打开审核页。即使流程起点已经 ensure，打开前也必须再次幂等 ensure，再取得产品返回的项目 URL：
 
@@ -129,6 +142,8 @@ node "$STUDIO" \
 
 脚本会保留项目 hash，并确认 5190 单一产品入口真的注册了 HyperFrames 顶层 `koubo` 视图。只有返回 `ok=true`，才使用 Codex 内置浏览器打开 `studio.url`，然后停止自动推进，等待用户划词、恢复和保存。公开 Skill 不切换到第二个 Studio 端口。
 
+在打开浏览器前，把 `productUrl` 的 `#project/<projectId>` 与刚才 API/readback 的 `projectId` 严格比对，并绑定 `stage=cut_review_ready`、Project / Cuts / EditList revisions。`ensure-studio` 的 `ok=true` 只证明产品面能力，不能代替 URL/hash 项目身份和 revision 的项目级绑定；任何一项不一致都重新 readback，不打开或确认。
+
 `studio_capability_missing` 必须停止并说明版本不兼容；可以建议使用 `$chengfeng-report-videocut-bug` 生成脱敏 Issue 草稿。禁止仅因 URL 带有 `?view=koubo` 就认为新界面存在，也禁止回退到任何没有 capability manifest 的旧任务面板。
 
 不要：
@@ -139,7 +154,7 @@ node "$STUDIO" \
 - 控制 Studio DOM、直接改媒体元素；
 - 创建独立音频轨或占位字幕轨。
 
-## 4. 确认卡与物理剪切
+## 4. user confirmation → Product execution：确认卡与物理剪切
 
 用户表示审核完成后：
 
@@ -171,7 +186,9 @@ node "$VC" cuts apply "$jobDir" \
 
 `return_cut_review` 先再次 ensure-running，再返回同一 Studio；`pause_workflow` 保存状态后停止。
 
-## 5. 重建剪后字幕
+本次不实现一次性 confirmation receipt；卡片动作仍由 Agent 与 Product revision 比对约束，不把它描述为 Product 强制 receipt。
+
+## 5. outcome verification：重建剪后字幕
 
 物理剪切成功后，必须基于 `source_cut.mp4` 重新转录。先读 [剪后字幕校对](references/subtitle-correction.md)。禁止把原始字幕按删除区间机械拼成最终字幕。
 
@@ -187,7 +204,7 @@ node "$VC" artifact put "$jobDir" \
   --json
 ```
 
-只有媒体可解码、有音频流、剪后字幕已发布且时间轴有效，才能报告基础素材包完成。
+只有媒体可解码、有音频流、剪后字幕已发布且时间轴有效，才能报告基础素材包完成。报告必须分开写：Product 结构化 revision / artifact / verification 为 **API/readback PASS**；真实同项目浏览器帧审核才是 **visual frame PASS**；没有人实际听音时一律为 **human listening UNVERIFIED**，不得用播放、DOM、截图或媒体探测替代。
 
 ## 恢复与失败
 

@@ -84,7 +84,7 @@ const optionSchema = z.object({
   nextStep: z.string(),
 });
 
-const server = new McpServer({ name: "chengfeng-videocut", version: "0.4.1" });
+const server = new McpServer({ name: "chengfeng-videocut", version: "0.5.0" });
 
 registerAppResource(
   server,
