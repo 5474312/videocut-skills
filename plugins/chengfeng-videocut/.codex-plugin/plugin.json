@@ -1,7 +1,7 @@
 {
   "name": "chengfeng-videocut",
-  "version": "0.3.2",
-  "description": "Five manually selectable chengfeng-videocut Skills: one router, two talking-head workflows, safe bug reporting, and Marketplace update checks. The Plugin home keeps three supported starter prompts.",
+  "version": "0.4.0",
+  "description": "Five chengfeng-videocut Skills: shared product boundaries, two talking-head workflows, safe bug reporting, and Marketplace update checks. The Plugin name remains the root entry; no same-name router Skill.",
   "author": {
     "name": "Chengfeng",
     "url": "https://github.com/Agentchengfeng"
@@ -18,8 +18,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "chengfeng-videocut",
-    "shortDescription": "\u526a\u53e3\u64ad\u3001\u6210\u7247\u3001\u5b89\u5168 Bug \u4e0e\u66f4\u65b0\u68c0\u67e5",
-    "longDescription": "\u63d0\u4f9b\u4e24\u4e2a\u53e3\u64ad\u4e1a\u52a1\u5165\u53e3\uff0c\u4ee5\u53ca\u5148\u8131\u654f\u786e\u8ba4\u7684 Bug \u4e0a\u62a5\u548c\u53ea\u7ecf\u5b98\u65b9 Codex Marketplace \u673a\u5236\u6267\u884c\u7684 Skills \u66f4\u65b0\u68c0\u67e5\u3002\u66f4\u65b0\u4e0d\u8986\u76d6\u672c\u5730 cache \u6216 Product Runtime\uff0c\u5e76\u8981\u6c42\u53ef\u4fe1\u6765\u6e90\u548c\u7528\u6237\u786e\u8ba4\u3002",
+    "shortDescription": "剪口播、成片、安全 Bug 与更新检查",
+    "longDescription": "提供两个口播业务入口、一个共同产品边界，以及先脱敏确认的 Bug 上报和只经官方 Codex Marketplace 机制执行的 Skills 更新检查。更新不覆盖本地 cache 或 Product Runtime，并要求可信来源和用户确认。",
     "developerName": "Chengfeng",
     "category": "Design",
     "capabilities": [
@@ -27,9 +27,9 @@
       "Write"
     ],
     "defaultPrompt": [
-      "\u4f7f\u7528 $chengfeng-videocut:chengfeng-videocut\uff1a\u6211\u60f3\u5f00\u59cb\u5904\u7406\u4e00\u6761\u53e3\u64ad\u3002",
-      "\u4f7f\u7528 $chengfeng-videocut:chengfeng-cut-talking-head \u526a\u6389\u8fd9\u6761\u89c6\u9891\u91cc\u7684\u53e3\u8bef\uff0c\u5ba1\u6838\u540e\u751f\u6210\u526a\u540e\u89c6\u9891\u548c\u5b57\u5e55\u3002",
-      "\u4f7f\u7528 $chengfeng-videocut:chengfeng-finish-talking-head \u628a\u8fd9\u4efd\u53e3\u64ad\u57fa\u7840\u7d20\u6750\u505a\u6210\u5e26\u5206\u955c\u548c\u52a8\u753b\u7684\u6210\u7247\u3002"
+      "使用 $chengfeng-videocut:chengfeng-cut-talking-head 剪掉这条视频里的口误，审核后生成剪后视频和字幕。",
+      "使用 $chengfeng-videocut:chengfeng-finish-talking-head 把这份口播基础素材做成带分镜和动画的成片。",
+      "使用 $chengfeng-videocut:chengfeng-report-videocut-bug 整理并预览一个剪口播问题的 Bug 草稿。"
     ],
     "brandColor": "#16A37A"
   },
