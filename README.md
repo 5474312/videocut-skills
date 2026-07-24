@@ -2,9 +2,10 @@
 
 给 Codex 用的中文口播剪辑 Marketplace 插件。
 
-公开入口由两个业务入口和两个支持入口组成：
+公开入口由一个总入口、两个业务入口和两个支持入口组成：
 
 ```text
+总入口       -> 只选择一个具体入口，不读写 Product
 剪口播      -> source_cut.mp4 + subtitles.srt
 口播成片    -> final.mp4 + verification.json
 上报 Bug    -> 脱敏草稿 -> 用户确认 -> GitHub Issue URL
@@ -54,7 +55,7 @@ Runtime 默认安装到：
 ~/.chengfeng-videocut
 ```
 
-Plugin 0.3.0 的产品合同固定为 `v0.2.0` Release、Runtime 0.2.0+ EDL 与用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。首次安装会从这个精确 Release 下载 `install.sh` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退 v0.1.1。
+Plugin 0.3.1 的产品合同固定为 `v0.2.0` Release、Runtime 0.2.0+ EDL 与用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。首次安装会从这个精确 Release 下载 `install.sh` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退 v0.1.1。
 
 每个业务流程在第一次产品 API 前、每次人工审核恢复前都会执行共享 `ensure-running`：
 
@@ -67,6 +68,26 @@ Skill -> Product service ensure -> launchd service ready -> 继续当前流程
 服务由 Product 管理；Plugin 不直接运行 `launchctl`、`nohup`，也不会把 Codex 当前终端当作 Studio Server 的生命周期所有者。
 
 ## 使用
+
+### 从一个入口开始
+
+在技能选择器中选择 `chengfeng-videocut`，或显式写：
+
+```text
+$chengfeng-videocut:chengfeng-videocut
+```
+
+它只帮你选择“剪口播、口播成片、上报 Bug、检查更新”中的一个具体入口；不启动 Runtime、不打开 Studio、也不改项目。
+
+每个公开 Skill 都标记为 `user-invocable: true`。Plugin namespace 必须保留，不能用裸 `$chengfeng` 代替：
+
+```text
+chengfeng-videocut:chengfeng-videocut
+chengfeng-videocut:chengfeng-cut-talking-head
+chengfeng-videocut:chengfeng-finish-talking-head
+chengfeng-videocut:chengfeng-report-videocut-bug
+chengfeng-videocut:chengfeng-check-videocut-updates
+```
 
 剪口播：
 
@@ -107,6 +128,7 @@ Skill -> Product service ensure -> launchd service ready -> 继续当前流程
 ```text
 Codex
   |
+  +-- chengfeng-videocut (只路由)
   +-- chengfeng-cut-talking-head
   +-- chengfeng-finish-talking-head
   +-- chengfeng-report-videocut-bug (支持入口)
@@ -142,6 +164,7 @@ chengfeng-videocut-skills/
 │   ├── scripts/
 │   ├── references/
 │   └── skills/
+│       ├── chengfeng-videocut/
 │       ├── chengfeng-cut-talking-head/
 │       ├── chengfeng-finish-talking-head/
 │       ├── chengfeng-report-videocut-bug/
@@ -155,13 +178,13 @@ chengfeng-videocut-skills/
 
 ## 发布边界
 
-公开 Runtime v0.1.1 不满足 Plugin 0.3.0 的合同，不能再作为自动安装目标。稳定发布顺序必须是：
+公开 Runtime v0.1.1 不满足 Plugin 0.3.1 的合同，不能再作为自动安装目标。稳定发布顺序必须是：
 
 ```text
 Runtime v0.2.0 Release
   -> install.sh 与产品包进入 SHA256SUMS
   -> 隔离环境首次安装 / doctor / Studio capability / 两条工作流 E2E
-  -> Plugin 0.3.0 Marketplace 发布
+  -> Plugin 0.3.1 Marketplace 发布
 ```
 
 在 Runtime v0.2.0 补齐云端 transcribe/import、内置 renderer 并完成真实项目 E2E 前，不把“两条工作流已经完全自动化”作为公开承诺。
@@ -175,7 +198,7 @@ npm run build
 npm test
 ```
 
-另外运行 Skill validator、Plugin validator，并在隔离 Codex 任务中确认发现两个业务 Skill 和两个支持 Skill。
+另外运行 Plugin validator、前端 YAML/手动入口契约测试，并在隔离 Codex 上下文中确认发现总入口、两个业务 Skill 和两个支持 Skill。静态文件存在不等于斜杠/技能选择器已经显示，后者必须单独实测。
 
 ## 官方来源
 
