@@ -1,6 +1,7 @@
 ---
 name: chengfeng-finish-talking-head
 description: 把口播基础素材制作成完整成片：生成并审核分镜、动画和总时间线，随后导出与验收 final.mp4。用户说口播成片、口播分镜、口播动画、导出口播视频、继续口播成片，或确认卡回传 action=continue_finish_storyboard / continue_finish_animation / continue_finish_timeline / return_finish_storyboard / return_finish_animation / return_finish_timeline 时使用。不要用于原始删词、单独安装、单独打开工作台或普通 HyperFrames 视频。
+user-invocable: true
 ---
 
 # 口播成片

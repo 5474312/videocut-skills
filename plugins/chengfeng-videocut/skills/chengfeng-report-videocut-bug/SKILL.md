@@ -1,6 +1,7 @@
 ---
 name: chengfeng-report-videocut-bug
 description: 整理、脱敏并上报 chengfeng-videocut 的 GitHub Bug。用户说上报 Bug、反馈剪口播问题、提交 GitHub Issue、这个问题告诉开发者，或要求继续提交已预览的 Bug 草稿时使用。不要用于功能建议、普通排错、代码提交或未获用户确认的自动上报。
+user-invocable: true
 ---
 
 # 上报 Bug

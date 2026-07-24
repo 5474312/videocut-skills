@@ -1,6 +1,6 @@
 {
   "name": "chengfeng-videocut",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Five chengfeng-videocut Skills: shared product boundaries, two talking-head workflows, safe bug reporting, and Marketplace update checks. The Plugin name remains the root entry; no same-name router Skill.",
   "author": {
     "name": "Chengfeng",

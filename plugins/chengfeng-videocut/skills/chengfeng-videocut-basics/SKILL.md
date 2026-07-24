@@ -1,6 +1,7 @@
 ---
 name: chengfeng-videocut-basics
 description: 为 chengfeng-videocut 的剪口播、口播成片、Bug 上报和更新检查提供共同的分发边界与产品所有权规则。当任务已明确属于该 Plugin、但需要先判断共同边界或选择具体业务/支持 Skill 时使用；不用于直接执行剪辑、创建项目、启动 Runtime 或替代具体 Skill。
+user-invocable: true
 ---
 
 # chengfeng-videocut 基础规则

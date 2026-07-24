@@ -28,6 +28,7 @@ for (const name of publicSkills) {
   assert.match(text, new RegExp(`^name: ${name}$`, "m"), `${name} must match its directory and frontmatter`);
   assert.match(name, /^chengfeng-/, `${name} must use the public chengfeng- prefix`);
   assert.notEqual(name, pluginName, "a raw Skill name must not shadow the Plugin root name");
+  assert.match(text, /^user-invocable: true$/m, `${name} must retain the host-compatible manual-selection metadata`);
 }
 
 for (const name of concreteSkills) {
@@ -56,6 +57,7 @@ console.log(JSON.stringify({
   pluginStarterPromptCap: true,
   namespacedDefaultPrompts: true,
   basicsHasNoRuntimeOwnership: true,
+  hostManualSelectionMetadata: true,
   skillDirAssumptionRemoved: true,
   explicitBusinessContract: true,
 }));

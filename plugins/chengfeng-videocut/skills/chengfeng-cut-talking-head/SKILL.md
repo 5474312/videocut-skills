@@ -1,6 +1,7 @@
 ---
 name: chengfeng-cut-talking-head
 description: 剪辑中文口播原素材：逐词转录、识别口误与重复、生成删词候选、在 Studio 审核后执行可靠物理剪切，并重建剪后字幕。用户说剪口播、处理口误、生成口播基础素材、继续剪口播，或确认卡回传 action=continue_cut / return_cut_review 时使用。不要用于单独安装、单独打开工作台、普通视频编辑或口播分镜成片。
+user-invocable: true
 ---
 
 # 剪口播
