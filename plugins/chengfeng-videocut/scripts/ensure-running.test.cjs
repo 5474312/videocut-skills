@@ -12,6 +12,11 @@ const cutSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-cut-talkin
 const exportSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-export-talking-head", "SKILL.md"), "utf8");
 const subtitleSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-subtitle-talking-head", "SKILL.md"), "utf8");
 const finishSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-finish-talking-head", "SKILL.md"), "utf8");
+const visualSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-visual-talking-head", "SKILL.md"), "utf8");
+const visualContract = fs.readFileSync(
+  path.join(root, "skills", "chengfeng-visual-talking-head", "references", "visual-module-contract.md"),
+  "utf8",
+);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "videocut-ensure-running-test-"));
 
 function writeExecutable(file, body) {
@@ -129,6 +134,18 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   // 第二遍把 Grok 听成了 Clock / Gokul / Glock。
   assert.match(subtitleSkill, /transcript dictionary/, "subtitles must run the dictionary");
   assert.doesNotMatch(subtitleSkill, /node "\$VC" start|nohup|launchctl/);
+
+  // 画面：看在放之前，量在画之前。这三条守的是流程里最容易被跳过的两步。
+  const frameStep = visualSkill.indexOf("visual frame");
+  const addStep = visualSkill.indexOf("visual add");
+  assert.ok(frameStep >= 0 && addStep > frameStep, "the skill must look at frames before placing layers");
+  assert.match(visualSkill, /不存秒数/, "layers bind subtitle screens, never seconds");
+  assert.match(visualSkill, /不动是常见答案|不动。这是最常见的正确答案/, "restraint is a rule, not a mood");
+  assert.doesNotMatch(visualSkill, /artifact put|confirm-storyboard/, "the retired pipeline must not leak back");
+  // 模块契约的两条命门：少一条就是一类已经发生过的事故。
+  assert.match(visualContract, /color-scheme: dark/, "modules must declare the host color scheme");
+  assert.match(visualContract, /drawSVG/, "the paid-plugin trap must stay documented");
+  assert.doesNotMatch(visualSkill, /node "\$VC" start|nohup|launchctl/);
 
   const runtimeEnsure = finishSkill.indexOf('node "$ENSURE" --install-if-missing --json');
   const serviceEnsure = finishSkill.indexOf('node "$RUNNING" --json');
