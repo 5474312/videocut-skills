@@ -1,4 +1,4 @@
-# 两个业务 Skill 的阶段合同
+# 四个业务 Skill 的阶段合同
 
 `chengfeng-cut-talking-head` 与 `chengfeng-finish-talking-head` 都必须引用并按本合同执行。本文件是普通内部 reference，不是用户可调用的 Skill，不创建项目副本、播放器、素材库、上传会话或媒体写入能力。
 
@@ -40,7 +40,8 @@ preflight
 
 ## 共同停止条件
 
-- 不新增或暴露“转写”“验证”“导出”“播放器”“上传”或“素材库” Skill。
+- 业务 Skill 恰好四个，按流程顺序：剪口播 → 导出 → 字幕 → 口播成片。**一段只产出一样东西，产出即交棒。**
+- 不新增或暴露“验证”“播放器”“上传”或“素材库” Skill；也不新增第五个业务段。
 - 不改 Product Runtime、Studio、`5190`、schema、source 或 Product 项目文件。
 - 不改任何 Skill 的 `user-invocable` metadata；其存在不证明 host UI 可见。
 - 支持 Skill 不进入本合同的剪辑状态机。

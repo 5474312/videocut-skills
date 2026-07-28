@@ -9,6 +9,8 @@ const { spawnSync } = require("node:child_process");
 const root = path.resolve(__dirname, "..");
 const ensureRunning = path.join(root, "scripts", "ensure-running.cjs");
 const cutSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-cut-talking-head", "SKILL.md"), "utf8");
+const exportSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-export-talking-head", "SKILL.md"), "utf8");
+const subtitleSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-subtitle-talking-head", "SKILL.md"), "utf8");
 const finishSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-finish-talking-head", "SKILL.md"), "utf8");
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "videocut-ensure-running-test-"));
 
@@ -87,8 +89,46 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   const cutReviewEnsure = cutSkill.indexOf('node "$RUNNING" --json', cutReview);
   const cutReviewOpen = cutSkill.indexOf('node "$VC" open "$jobDir" --json', cutReview);
   assert.ok(cutReview < cutReviewEnsure && cutReviewEnsure < cutReviewOpen);
-  assert.match(cutSkill, /审核完成后：[\s\S]*node "\$RUNNING" --json/);
+  // 剪口播到账本为止：确认卡与物理剪切已经搬进导出 Skill。留在这里会让剪刀
+  // 落在用户确认之后又改出来的那一版上。
+  assert.doesNotMatch(cutSkill, /cuts apply/, "cut must not perform the physical cut");
+  assert.doesNotMatch(cutSkill, /show_workflow_confirmation/, "the confirmation card belongs to export");
   assert.doesNotMatch(cutSkill, /node "\$VC" start|nohup|launchctl/);
+
+  // 导出：确认卡之前、拿到 continue_cut 之后，都必须先确认服务活着。
+  assert.match(exportSkill, /show_workflow_confirmation/);
+  const applyPosition = exportSkill.indexOf("cuts apply");
+  const exportEnsure = exportSkill.indexOf('node "$RUNNING" --json');
+  assert.ok(exportEnsure >= 0 && exportEnsure < applyPosition, "export must ensure the service before cutting");
+  assert.match(exportSkill, /--confirmed/, "the physical cut must be explicitly confirmed");
+  assert.doesNotMatch(exportSkill, /node "\$VC" start|nohup|launchctl/);
+
+  // 字幕：只需要账本。这三条守的是它「不做什么」——
+  // 旧版要求先导出 source_cut.mp4、再转写剪后视频、最后 artifact put 发布 SRT，
+  // 三样现在一个都不用了：逐词稿加账本就能算出剪后时间。
+  assert.match(subtitleSkill, /edit-list\.json/, "subtitles need the ledger and say so");
+  assert.match(subtitleSkill, /subtitle build/, "subtitles are written by subtitle build");
+  assert.match(
+    subtitleSkill,
+    /不要断言 `source_cut\.mp4`/,
+    "the skill must say out loud that the export is not a precondition",
+  );
+  assert.doesNotMatch(
+    subtitleSkill,
+    /artifact put/,
+    "subtitles are no longer published as an SRT artifact",
+  );
+  // 守的是「不要去调」，不是「不要提到」—— skill 里点名 transcript retranscribe
+  // 正是为了说明它是上一版遗留、做字幕不要用。
+  assert.doesNotMatch(
+    subtitleSkill,
+    /node "\$VC" (transcribe|transcript retranscribe)/,
+    "re-transcribing to get cut-timeline times is arithmetic the ledger already answers",
+  );
+  // 词典是每次转录都要过的一道闸，不是可选步骤 —— 同一段音频转两遍，
+  // 第二遍把 Grok 听成了 Clock / Gokul / Glock。
+  assert.match(subtitleSkill, /transcript dictionary/, "subtitles must run the dictionary");
+  assert.doesNotMatch(subtitleSkill, /node "\$VC" start|nohup|launchctl/);
 
   const runtimeEnsure = finishSkill.indexOf('node "$ENSURE" --install-if-missing --json');
   const serviceEnsure = finishSkill.indexOf('node "$RUNNING" --json');

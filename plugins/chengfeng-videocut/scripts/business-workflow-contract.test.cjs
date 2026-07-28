@@ -46,11 +46,13 @@ const skills = fs.readdirSync(path.join(root, "skills")).sort();
 assert.deepEqual(skills, [
   "chengfeng-check-videocut-updates",
   "chengfeng-cut-talking-head",
+  "chengfeng-export-talking-head",
   "chengfeng-finish-talking-head",
   "chengfeng-report-videocut-bug",
-], "the Plugin must expose exactly four task-facing Skills");
+  "chengfeng-subtitle-talking-head",
+], "the Plugin must expose exactly six task-facing Skills");
 console.log(JSON.stringify({
-  fourTaskFacingSkillsRetained: true,
+  sixTaskFacingSkillsRetained: true,
   sharedBusinessContract: true,
   phaseOrder: phases,
   directProjectCreate: true,

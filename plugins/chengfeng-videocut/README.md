@@ -6,6 +6,8 @@
 [Plugin: chengfeng-videocut]
        |
        +-- 剪口播 ----> chengfeng-cut-talking-head
+       +-- 导出 ------> chengfeng-export-talking-head
+       +-- 字幕 ------> chengfeng-subtitle-talking-head
        +-- 口播成片 --> chengfeng-finish-talking-head
        +-- 上报 Bug --> chengfeng-report-videocut-bug
        +-- 检查更新 --> chengfeng-check-videocut-updates
@@ -24,12 +26,14 @@ $chengfeng-videocut:chengfeng-check-videocut-updates
 
 静态元数据、`agents/openai.yaml`、Plugin 首页 starter prompt 和 CLI 的 `$plugin:skill` 调用，不能单独证明 Desktop Slash/Plugin 群组已经在界面中展示；那一项必须由实际 Desktop UI 单独验收。
 
-四个 raw Skill 都保留 `user-invocable: true`，以兼容已知 host 的手动选择 metadata；它不是群组显示、排序或可见性的公开保证。
+六个 raw Skill 都保留 `user-invocable: true`，以兼容已知 host 的手动选择 metadata；它不是群组显示、排序或可见性的公开保证。
 
 ## 能力边界
 
 ```text
-剪口播      -> source_cut.mp4 + subtitles.srt
+剪口播      -> 已复核的删词账本（不产媒体）
+导出        -> source_cut.mp4
+字幕        -> subtitles.srt
 口播成片    -> final.mp4 + verification.json
 上报 Bug    -> 脱敏草稿 -> 用户确认 -> GitHub Issue URL
 检查更新    -> 官方 Marketplace 快照 -> 来源证明 -> 用户确认 -> 复读版本

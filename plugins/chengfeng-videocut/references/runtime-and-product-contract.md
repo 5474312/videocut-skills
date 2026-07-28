@@ -1,11 +1,11 @@
 # Runtime 与产品契约
 
-两个业务 Skill 共用本文件；它是普通内部 reference，不是用户可触发的 Skill。
+四个业务 Skill 共用本文件；它是普通内部 reference，不是用户可触发的 Skill。
 
 ## Plugin 入口边界
 
 - Plugin `chengfeng-videocut` 只负责安装与 UI 群组，不是 raw Skill。
-- 用户入口只有剪口播、口播成片、Bug 上报和更新检查四个具体 Skill；共同规则不得建立 `SKILL.md`、router、alias 或第二个总入口。
+- 用户入口只有剪口播、导出、字幕、口播成片、Bug 上报和更新检查六个具体 Skill；共同规则不得建立 `SKILL.md`、router、alias 或第二个总入口。
 - Product Runtime、Studio、项目、媒体、EDL、history、播放器与唯一时钟只由 Product 拥有；Skill 只做语义判断、流程编排和受约束调用。
 - Plugin 首页 starter prompt、`user-invocable` metadata、静态 YAML 与 CLI 发现结果都不能单独证明 Desktop `/` 选择器已经视觉验收。
 
@@ -37,7 +37,7 @@ ensure-runtime
 
 ## 常驻服务门禁
 
-Runtime 二进制兼容后，两个业务 Skill 都调用同一个 `scripts/ensure-running.cjs`：
+Runtime 二进制兼容后，四个业务 Skill 都调用同一个 `scripts/ensure-running.cjs`：
 
 ```text
 ensure-running.cjs
