@@ -161,6 +161,9 @@ spans/*.mp4      合成后的分段。它错 = 推近或对齐错
 画面整块白             模块少了 `:root { color-scheme: dark }`
 推近的框歪了            模块的 viewBox 和层的 zoom 不是同一组数
 成片比计划短            某个 span 帧数不够，看 compose 阶段的报错
+层边界闪一小段原片      overlay 截图陈旧（帧标记验证失效）。产品靠页面顶部的
+                      帧标记条自证每张截图属于哪一帧；若复发，先确认 overlay
+                      PNG 顶部有标记条、compose 有裁掉它的 crop
 找不到 Chrome          装 Google Chrome，别改成别的渲染路径
 ```
 
