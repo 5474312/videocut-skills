@@ -40,6 +40,12 @@ window.addEventListener("message", (event) => {
 禁墙钟           Date.now / 自转 rAF 都不许，时间只来自 seek 消息
 ```
 
+## duration 可能比词的跨度长
+
+层间 ≤0.75 秒的空隙归前一层（产品规矩，防相邻边界闪原片）。
+模块收到的 duration 是**延长后的**——按 duration 比例摆的兜底时刻会跟着挪，
+写死的相对时刻要在层边界变化时复查。
+
 ## 动作钉在词上
 
 ```text
