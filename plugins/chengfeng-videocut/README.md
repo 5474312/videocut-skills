@@ -6,8 +6,9 @@
 [Plugin: chengfeng-videocut]
        |
        +-- 剪口播 ----> chengfeng-cut-talking-head
-       +-- 导出 ------> chengfeng-export-talking-head
        +-- 字幕 ------> chengfeng-subtitle-talking-head
+       +-- 画面 ------> chengfeng-visual-talking-head
+       +-- 导出 ------> chengfeng-export-talking-head
        +-- 口播成片 --> chengfeng-finish-talking-head
        +-- 上报 Bug --> chengfeng-report-videocut-bug
        +-- 检查更新 --> chengfeng-check-videocut-updates

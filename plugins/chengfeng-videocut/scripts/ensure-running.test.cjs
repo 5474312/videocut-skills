@@ -100,12 +100,19 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   assert.doesNotMatch(cutSkill, /show_workflow_confirmation/, "the confirmation card belongs to export");
   assert.doesNotMatch(cutSkill, /node "\$VC" start|nohup|launchctl/);
 
-  // 导出：确认卡之前、拿到 continue_cut 之后，都必须先确认服务活着。
-  assert.match(exportSkill, /show_workflow_confirmation/);
-  const applyPosition = exportSkill.indexOf("cuts apply");
-  const exportEnsure = exportSkill.indexOf('node "$RUNNING" --json');
-  assert.ok(exportEnsure >= 0 && exportEnsure < applyPosition, "export must ensure the service before cutting");
-  assert.match(exportSkill, /--confirmed/, "the physical cut must be explicitly confirmed");
+  // 导出：现在是成片导出，不是物理剪切。它只读、只产出一个新文件，所以确认卡和
+  // 「冻结 revision 再剪」整套都不适用了 —— 那套守的是「剪刀落在用户没看过的
+  // 那一版上」，而这里没有剪刀。留着反而会让人以为导出会改项目。
+  assert.doesNotMatch(exportSkill, /show_workflow_confirmation/, "export no longer mutates anything");
+  assert.doesNotMatch(exportSkill, /cuts apply/, "export burns a film; it does not cut the source");
+  assert.match(exportSkill, /export <project> --dry-run/, "export must plan before it encodes");
+  const dryRunPosition = exportSkill.indexOf("--dry-run 先报计划");
+  const verifyPosition = exportSkill.indexOf("抽帧看像素");
+  assert.ok(dryRunPosition >= 0 && dryRunPosition < verifyPosition, "plan comes before pixels");
+  // 三条验收纪律，各对应一次真事故或一条已定的规矩。
+  assert.match(exportSkill, /不许用预览截图/, "the preview cannot be evidence for the film");
+  assert.match(exportSkill, /human listening UNVERIFIED/, "nobody listened until somebody listened");
+  assert.match(exportSkill, /color-scheme: dark/, "the白板 fault must stay in the lookup table");
   assert.doesNotMatch(exportSkill, /node "\$VC" start|nohup|launchctl/);
 
   // 字幕：只需要账本。这三条守的是它「不做什么」——
