@@ -8,16 +8,18 @@ const root = path.resolve(__dirname, "..");
 const pluginName = "chengfeng-videocut";
 const publicSkills = [
   "chengfeng-cut-talking-head",
-  "chengfeng-export-talking-head",
   "chengfeng-subtitle-talking-head",
+  "chengfeng-visual-talking-head",
+  "chengfeng-export-talking-head",
   "chengfeng-finish-talking-head",
   "chengfeng-report-videocut-bug",
   "chengfeng-check-videocut-updates",
 ];
 const displayNames = {
   "chengfeng-cut-talking-head": "chengfeng · 剪口播",
-  "chengfeng-export-talking-head": "chengfeng · 导出",
   "chengfeng-subtitle-talking-head": "chengfeng · 字幕",
+  "chengfeng-visual-talking-head": "chengfeng · 画面",
+  "chengfeng-export-talking-head": "chengfeng · 导出",
   "chengfeng-finish-talking-head": "chengfeng · 口播成片",
   "chengfeng-report-videocut-bug": "chengfeng · 上报 Bug",
   "chengfeng-check-videocut-updates": "chengfeng · 检查更新",
@@ -62,7 +64,7 @@ assert.doesNotMatch(
 
 assert.deepEqual(fs.readdirSync(path.join(root, "skills")).sort(), publicSkills.slice().sort(), "only the six task-facing Skills may be discovered");
 console.log(JSON.stringify({
-  sixTaskFacingSkills: true,
+  sevenTaskFacingSkills: true,
   pluginRootUnshadowed: true,
   pluginStarterPromptCap: true,
   namespacedDefaultPrompts: true,

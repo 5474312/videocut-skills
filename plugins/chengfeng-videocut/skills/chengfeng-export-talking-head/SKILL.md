@@ -23,6 +23,27 @@ user-invocable: true
 里的「结论等级」一节。**导出不进剪辑状态机**：它不改任何项目文件、不做 CAS 写入、
 不推进 stage，产出是一个新文件，重跑一次就覆盖。所以它不需要确认卡。
 
+## 0. 每次先做 Runtime 预检
+
+从 Codex 已启用 Plugin 列表精确取得 `chengfeng-videocut` 的 `source.path`。
+`SKILL_DIR` 不是 Codex 保证注入的变量；禁止依赖它、硬编码开发机路径或用 `find` 猜测安装目录：
+
+```bash
+PLUGIN_ROOT="$(codex plugin list --json | node -e 'let s=""; process.stdin.on("data", c => s += c); process.stdin.on("end", () => { const rows = JSON.parse(s).installed || []; const hit = rows.filter(x => x.enabled && x.name === "chengfeng-videocut" && x.source && x.source.path); if (hit.length !== 1) process.exit(1); process.stdout.write(hit[0].source.path); });')"
+test -n "$PLUGIN_ROOT" && test -f "$PLUGIN_ROOT/.codex-plugin/plugin.json" || { echo "chengfeng-videocut enabled plugin root unavailable" >&2; exit 1; }
+ENSURE="$PLUGIN_ROOT/scripts/ensure-runtime.cjs"
+VC="$PLUGIN_ROOT/scripts/videocut-cli.cjs"
+
+node "$ENSURE" --install-if-missing --json
+```
+
+- `ready`：继续本 Skill。
+- `missing`：脚本只提示一次「正在从 GitHub Release 安装」，校验完成后自动续跑。
+- `runtime_unhealthy`、安装失败或安装后 doctor 失败：报告结构化诊断并停止。
+- 预检阶段禁止启动服务、打开 Studio 或创建项目。
+
+详细协议见 [Runtime 与产品契约](../../references/runtime-and-product-contract.md)。
+
 ## 命令
 
 ```bash
@@ -44,19 +65,50 @@ node "$VC" export <project> --keep-work --json        # 留下中间片和逐帧
 `--dry-run` 里的 `warnings` 必须原样转述。它只报一类事：**某些字幕屏或画面层的词
 已经被剪掉了**，所以它们不会出现在成片里。这是上游要决定的事，不是导出该替人吞掉的。
 
-## 清晰度：默认放大 2 倍，知道为什么再改
+## 清晰度：源片是天花板，先看源再谈放大
+
+导出前看一眼源分辨率（`--dry-run` 的 `source` 字段就有）：
 
 ```text
-底片放大不会变清楚    960x720 的录屏，放多大都是那些细节
-字幕和动画会          它们是按输出尺寸重画的，2 倍就是真的 2 倍分辨率
-                     —— 而观众真正在读的就是这两样
-平台还会再压一次      给它一张大图，它分配的码率也更高
+源宽 ≥2560（Retina 原生录屏）  → --scale 1，输出就是原生像素，这是最好的情况
+源宽 <1920（如 960×720）      → 先停一下：问用户有没有同一次录制的高清导出。
+                              录屏工具常常能把同一次录制重新导出成 3 倍分辨率，
+                              换源比任何后期都管用（见下节）。确实没有 → --scale 2
 ```
 
-所以默认 `--scale 2`。**只有一种情况用 `--scale 1`**：要一个体积小的样片给人过目。
-交付件不要用 1。
+`--scale 2` 对低清源有用的原因：底片放大不会变清楚，但**字幕和动画是按输出尺寸
+重画的**——观众真正在读的就是这两样；平台再压一次时，大图分到的码率也更高。
 
 **不要为了「更清晰」去调 `--fps`。** 帧率跟着源片走；改它只会让动画的采样和录屏对不上。
+
+## 换源：用户拿出同一次录制的高清版时
+
+这不是导出流程的一部分——导出本身永远只读。换源是用户明确点头后的独立素材操作，
+做完再回来正常导出。
+
+**先判定是不是同一条**（前两条就足够硬）：
+
+```bash
+ffprobe -v error -show_entries format=duration -of csv=p=0 <两个文件>   # 时长精确到毫秒相同
+ffmpeg -v error -i <文件> -map 0:a:0 -c copy -f md5 -                  # 音频流逐位相同
+# 再抽两三帧对比画面内容，眼睛确认
+```
+
+**音频逐位相同 = 时间线相同**：逐词稿、账本、字幕、画面层全绑词 id，一个不用动。
+这正是「绑词不绑秒」在换源这件事上的兑现。
+
+**换源三步**（2026-07-29 真实走过一次）：
+
+```text
+① 换文件      input/source.mp4 和 uploads/source.mp4 是硬链接对 ——
+              rm 两个，cp 新文件到 input/，再 ln 回 uploads/
+② 更新指纹    project.json 的 source.sha256 改成新文件的
+              （产品把源片当不可变文件校验指纹，不改会被挡）
+③ 重导        --scale 1 —— 换源就是为了原生像素，别再放大
+```
+
+音频不同（重新录了一遍、剪过、时长不一样）就**不是换源**，是新项目：
+逐词稿要重新转，所有标注作废。别硬套。
 
 ## 验收：三件事，缺一件就不算导出完成
 

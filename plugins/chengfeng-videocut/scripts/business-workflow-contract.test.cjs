@@ -50,9 +50,12 @@ assert.deepEqual(skills, [
   "chengfeng-finish-talking-head",
   "chengfeng-report-videocut-bug",
   "chengfeng-subtitle-talking-head",
-], "the Plugin must expose exactly six task-facing Skills");
+  // 2026-07-28 加入的画面（分镜）段：剪口播 → 字幕 → 画面 → 导出。
+  // 当时没进这张名单，07-29 对账补上。
+  "chengfeng-visual-talking-head",
+], "the Plugin must expose exactly seven task-facing Skills");
 console.log(JSON.stringify({
-  sixTaskFacingSkillsRetained: true,
+  sevenTaskFacingSkillsRetained: true,
   sharedBusinessContract: true,
   phaseOrder: phases,
   directProjectCreate: true,
