@@ -17,6 +17,24 @@ Plugin 根名  -> 安装与 UI 群组名，不是同名 Skill
 
 ## 安装
 
+**先说清楚一件事：下面的命令只安装 Skills 插件，不安装剪辑产品本体（播放器 / Studio）。**
+产品 Runtime 会在你第一次让 Agent 真正干活（剪口播、导出等）时自动从 GitHub Release
+下载安装——装完插件直接去找播放器是找不到的，先让 Agent 剪一次。
+
+**机器上需要预先装好这些**（缺任何一个，首次运行会在对应环节明确停下，不会静默跳过）：
+
+| 依赖 | 用途 | 要求 |
+| --- | --- | --- |
+| Bun | 运行产品 Runtime | ≥ 1.2 |
+| Node.js | Skill 预检脚本 | 近代版本即可 |
+| curl | 下载 Release | 系统自带即可 |
+| ffmpeg | 剪辑与导出 | ≥ 6 |
+| Google Chrome | 导出成片时渲染字幕和动画 | 桌面版 |
+
+**Runtime 装不上时，Agent 应停在安装指引上**——用自制审核页/播放器替代产品属于违反
+Skill 合同的行为（真实发生过：Runtime 缺失时 Agent 手搓了一个"审片台"，产出与产品
+完全不兼容）。遇到这种情况，把 Agent 的报错原文发 Issue。
+
 当前公开 Plugin P 是 `0.5.1`；发布后将由 Bootstrap manifest 固定其不可变 40-hex commit。直接使用 Codex Marketplace 安装：
 
 ```bash
