@@ -4,7 +4,7 @@
   "source": "Agentchengfeng/chengfeng-videocut-skills",
   "marketplace": "chengfeng-videocut",
   "plugin": "chengfeng-videocut",
-  "pluginRef": "b959248d64b026944cd212899841e53f5715ce6c",
+  "pluginRef": "afbf2a52121d17614ba0d914ed71cc2a67d561c0",
   "runtimeInstall": false,
   "allowedCommands": [
     "codex plugin marketplace add",
