@@ -35,10 +35,10 @@ Plugin 根名  -> 安装与 UI 群组名，不是同名 Skill
 Skill 合同的行为（真实发生过：Runtime 缺失时 Agent 手搓了一个"审片台"，产出与产品
 完全不兼容）。遇到这种情况，把 Agent 的报错原文发 Issue。
 
-当前公开 Plugin P 是 `0.5.2`；发布后将由 Bootstrap manifest 固定其不可变 40-hex commit。直接使用 Codex Marketplace 安装：
+当前公开 Plugin P 是 `0.5.3`；发布后将由 Bootstrap manifest 固定其不可变 40-hex commit。直接使用 Codex Marketplace 安装：
 
 ```bash
-codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref afbf2a52121d17614ba0d914ed71cc2a67d561c0
+codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 71b7154a27ee01f9393510abee0f508ba23e0a90
 codex plugin add chengfeng-videocut@chengfeng-videocut
 ```
 
