@@ -31,7 +31,7 @@ function writeExecutable(file, body) {
   fs.writeFileSync(file, body, { mode: 0o755 });
 }
 
-function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.2.0") {
+function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.3.0") {
   writeExecutable(file, `#!/bin/sh
 if [ "$1" = "--version" ]; then echo "chengfeng-videocut ${version}"; exit 0; fi
 if [ "$1" = "doctor" ]; then echo '${JSON.stringify({ schemaVersion: 1, product: "chengfeng-videocut", command: "doctor", ok: true, data: { healthy, ...(runtimeCapabilities ? { capabilities: runtimeCapabilities } : {}) } })}'; exit 0; fi
@@ -122,7 +122,7 @@ try {
   assert.equal(fs.existsSync(mustNotRun), false, "an existing incompatible Runtime must never be overwritten");
 
   const installHome = path.join(tmp, "installed-home");
-  const releaseDirectory = path.join(tmp, "release-v0.2.0");
+  const releaseDirectory = path.join(tmp, "release-v0.3.0");
   const observedReleaseBase = path.join(tmp, "observed-release-base");
   writeRelease(releaseDirectory, `#!/bin/sh
 set -eu
@@ -131,7 +131,7 @@ target="$CHENGFENG_VIDEOCUT_HOME/bin/chengfeng-videocut"
 mkdir -p "$(dirname "$target")"
 cat > "$target" <<'EOF'
 #!/bin/sh
-if [ "$1" = "--version" ]; then echo "chengfeng-videocut 0.2.0"; exit 0; fi
+if [ "$1" = "--version" ]; then echo "chengfeng-videocut 0.3.0"; exit 0; fi
 if [ "$1" = "doctor" ]; then echo '${JSON.stringify({ schemaVersion: 1, product: "chengfeng-videocut", command: "doctor", ok: true, data: { healthy: true, capabilities } })}'; exit 0; fi
 exit 2
 EOF
@@ -144,7 +144,7 @@ chmod +x "$target"
   });
   assert.equal(installed.status, 0, installed.stderr);
   assert.equal(JSON.parse(installed.stdout).installed, true);
-  assert.match(installed.stderr, /v0\.2\.0/);
+  assert.match(installed.stderr, /v0\.3\.0/);
   assert.equal(fs.readFileSync(observedReleaseBase, "utf8"), `file://${releaseDirectory}`);
 
   const unavailableHome = path.join(tmp, "unavailable-home");
