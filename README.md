@@ -7,7 +7,6 @@ Plugin 根入口、两个业务入口和两个支持入口组成；共同规则�
 ```text
 Plugin 根名  -> 安装与 UI 群组名，不是同名 Skill
 剪口播      -> source_cut.mp4 + subtitles.srt
-口播成片    -> final.mp4 + verification.json
 上报 Bug    -> 脱敏草稿 -> 用户确认 -> GitHub Issue URL
 检查更新    -> Marketplace 快照 -> 来源证明 -> 用户确认 -> 复读版本
 共同规则    -> references/，不注册为 Skill
@@ -94,10 +93,9 @@ Skill -> Product service ensure -> launchd service ready -> 继续当前流程
 Plugin `chengfeng-videocut` 保留给安装和可能的 Desktop 群组展示，不能被同名 raw Skill 或公共说明 Skill 覆盖。Plugin namespace 必须保留，不能用裸 `$chengfeng` 代替：
 
 ```text
-chengfeng-videocut:chengfeng-cut-talking-head
-chengfeng-videocut:chengfeng-finish-talking-head
-chengfeng-videocut:chengfeng-report-videocut-bug
-chengfeng-videocut:chengfeng-check-videocut-updates
+chengfeng-videocut:chengfeng-cut
+chengfeng-videocut:chengfeng-report-bug
+chengfeng-videocut:chengfeng-check-updates
 ```
 
 Plugin 首页 starter prompt 最多三条；它不是 Skill 数量表。`SKILL.md` 的 `name` / `description` 与 `agents/openai.yaml` 提供发现元数据，但不能单独证明 Desktop Slash/Plugin 群组已经显示；后者须单独实测。
@@ -108,17 +106,7 @@ Plugin 首页 starter prompt 最多三条；它不是 Skill 数量表。`SKILL.m
 使用“剪口播”处理这条视频。识别口误，等我审核后再物理剪切，并生成剪后字幕。
 ```
 
-技术 ID：`chengfeng-videocut:chengfeng-cut-talking-head`。
-
-口播成片：
-
-```text
-使用“口播成片”把这个项目的剪后视频和字幕做成完整成片。分镜、动画和时间线分别给我审核。
-```
-
-技术 ID：`chengfeng-videocut:chengfeng-finish-talking-head`。
-
-直接要求“口播成片”但缺少基础素材包时，Codex 会在同一个任务和 `projectId` 内先补完剪口播，不需要第三个“口播工作台”入口。
+技术 ID：`chengfeng-videocut:chengfeng-cut`。
 
 上报 Bug：
 
@@ -126,7 +114,7 @@ Plugin 首页 starter prompt 最多三条；它不是 Skill 数量表。`SKILL.m
 使用“上报 Bug”整理刚才的问题。先给我看脱敏后的 GitHub Issue 草稿，确认后再提交。
 ```
 
-技术 ID：`chengfeng-videocut:chengfeng-report-videocut-bug`。它会固定路由到产品或 Skills 仓库、清理常见密钥与本地路径、用脱敏内容指纹查重，并且只在用户确认同一份草稿后提交。
+技术 ID：`chengfeng-videocut:chengfeng-report-bug`。它会固定路由到产品或 Skills 仓库、清理常见密钥与本地路径、用脱敏内容指纹查重，并且只在用户确认同一份草稿后提交。
 
 检查更新：
 
@@ -134,7 +122,7 @@ Plugin 首页 starter prompt 最多三条；它不是 Skill 数量表。`SKILL.m
 使用“检查更新”检查 chengfeng-videocut Skills 的可信 Marketplace 更新；先报告状态，不要直接激活。
 ```
 
-技术 ID：`chengfeng-videocut:chengfeng-check-videocut-updates`。
+技术 ID：`chengfeng-videocut:chengfeng-check-updates`。
 
 ## 架构
 
@@ -142,10 +130,9 @@ Plugin 首页 starter prompt 最多三条；它不是 Skill 数量表。`SKILL.m
 Codex
   |
   +-- Plugin: chengfeng-videocut（根名称）
-  +-- chengfeng-cut-talking-head
-  +-- chengfeng-finish-talking-head
-  +-- chengfeng-report-videocut-bug (支持入口)
-  +-- chengfeng-check-videocut-updates (支持入口)
+  +-- chengfeng-cut
+  +-- chengfeng-report-bug (支持入口)
+  +-- chengfeng-check-updates (支持入口)
   +-- references/ (内部合同，不是 Skill)
   +-- show_workflow_confirmation (MCP App)
   |
@@ -178,10 +165,9 @@ chengfeng-videocut-skills/
 │   ├── scripts/
 │   ├── references/
 │   └── skills/
-│       ├── chengfeng-cut-talking-head/
-│       ├── chengfeng-finish-talking-head/
-│       ├── chengfeng-report-videocut-bug/
-│       └── chengfeng-check-videocut-updates/
+│       ├── chengfeng-cut/
+│       ├── chengfeng-report-bug/
+│       └── chengfeng-check-updates/
 ├── LICENSE
 ├── NOTICE.md
 └── CITATION.cff

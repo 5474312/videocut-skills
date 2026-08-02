@@ -1,5 +1,5 @@
 ---
-name: chengfeng-cut-talking-head
+name: chengfeng-cut
 description: 剪辑中文口播原素材：逐词转录、按词典修正听错的专名、识别口误与重复、生成删词候选、打开 Studio 让用户复核。只产出一份已复核的删词账本，不切媒体、不做字幕、不做分镜动画。用户说剪口播、处理口误、生成口播基础素材、继续剪口播，或确认卡回传 action=return_cut_review 时使用。不要用于执行物理剪切、导出剪后视频、单独安装、单独打开工作台或口播分镜成片。
 user-invocable: true
 ---
@@ -237,7 +237,7 @@ node "$STUDIO" \
 
 在打开浏览器前，把 `productUrl` 的 `#project/<projectId>` 与刚才 API/readback 的 `projectId` 严格比对，并绑定 `stage=cut_review_ready`、Project / Cuts / EditList revisions。`ensure-studio` 的 `ok=true` 只证明产品面能力，不能代替 URL/hash 项目身份和 revision 的项目级绑定；任何一项不一致都重新 readback，不打开或确认。
 
-`studio_capability_missing` 必须停止并说明版本不兼容；可以建议使用 `$chengfeng-report-videocut-bug` 生成脱敏 Issue 草稿。禁止仅因 URL 带有 `?view=koubo` 就认为新界面存在，也禁止回退到任何没有 capability manifest 的旧任务面板。
+`studio_capability_missing` 必须停止并说明版本不兼容；可以建议使用 `$chengfeng-report-bug` 生成脱敏 Issue 草稿。禁止仅因 URL 带有 `?view=koubo` 就认为新界面存在，也禁止回退到任何没有 capability manifest 的旧任务面板。
 
 不要：
 

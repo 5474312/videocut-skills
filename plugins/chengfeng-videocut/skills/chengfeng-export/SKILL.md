@@ -1,5 +1,5 @@
 ---
-name: chengfeng-export-talking-head
+name: chengfeng-export
 description: 把剪好的口播烧成一个成片文件：账本切片段、推近、字幕、HTML 画面层，一次全部烧进 mp4。用户说导出、出成片、烧字幕、渲染、导出视频、生成最终文件时使用。不要用于生成删词候选、写字幕、做画面动画。
 user-invocable: true
 ---

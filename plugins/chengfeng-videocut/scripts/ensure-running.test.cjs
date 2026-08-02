@@ -8,13 +8,12 @@ const { spawnSync } = require("node:child_process");
 
 const root = path.resolve(__dirname, "..");
 const ensureRunning = path.join(root, "scripts", "ensure-running.cjs");
-const cutSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-cut-talking-head", "SKILL.md"), "utf8");
-const exportSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-export-talking-head", "SKILL.md"), "utf8");
-const subtitleSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-subtitle-talking-head", "SKILL.md"), "utf8");
-const finishSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-finish-talking-head", "SKILL.md"), "utf8");
-const visualSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-visual-talking-head", "SKILL.md"), "utf8");
+const cutSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-cut", "SKILL.md"), "utf8");
+const exportSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-export", "SKILL.md"), "utf8");
+const subtitleSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-subtitle", "SKILL.md"), "utf8");
+const visualSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-visual", "SKILL.md"), "utf8");
 const visualContract = fs.readFileSync(
-  path.join(root, "skills", "chengfeng-visual-talking-head", "references", "visual-module-contract.md"),
+  path.join(root, "skills", "chengfeng-visual", "references", "visual-module-contract.md"),
   "utf8",
 );
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "videocut-ensure-running-test-"));
@@ -153,36 +152,6 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   assert.match(visualContract, /color-scheme: dark/, "modules must declare the host color scheme");
   assert.match(visualContract, /drawSVG/, "the paid-plugin trap must stay documented");
   assert.doesNotMatch(visualSkill, /node "\$VC" start|nohup|launchctl/);
-
-  const runtimeEnsure = finishSkill.indexOf('node "$ENSURE" --install-if-missing --json');
-  const serviceEnsure = finishSkill.indexOf('node "$RUNNING" --json');
-  const firstWorkflowApi = finishSkill.indexOf('node "$VC" workflow get');
-  assert.ok(runtimeEnsure >= 0 && runtimeEnsure < serviceEnsure && serviceEnsure < firstWorkflowApi);
-  const firstReview = finishSkill.indexOf("首次进入 storyboard");
-  const firstReviewEnsure = finishSkill.indexOf('node "$RUNNING" --json', firstReview);
-  const firstReviewOpen = finishSkill.indexOf('node "$VC" open "$jobDir" --json', firstReview);
-  const firstReviewGate = finishSkill.indexOf('node "$STUDIO" --url "$productUrl"', firstReview);
-  assert.ok(firstReview < firstReviewEnsure && firstReviewEnsure < firstReviewOpen && firstReviewOpen < firstReviewGate);
-  for (const action of [
-    "continue_finish_storyboard",
-    "continue_finish_animation",
-    "continue_finish_timeline",
-    "return_finish_storyboard",
-    "return_finish_animation",
-    "return_finish_timeline",
-  ]) {
-    let actionPosition = -1;
-    let guardedByRealCommand = false;
-    while ((actionPosition = finishSkill.indexOf(`action=${action}`, actionPosition + 1)) >= 0) {
-      const ensurePosition = finishSkill.indexOf('node "$RUNNING" --json', actionPosition);
-      if (ensurePosition > actionPosition && ensurePosition - actionPosition < 500) {
-        guardedByRealCommand = true;
-        break;
-      }
-    }
-    assert.ok(guardedByRealCommand, `${action} must execute the real ensure-running command before resuming`);
-  }
-  assert.doesNotMatch(finishSkill, /node "\$VC" start|nohup|launchctl/);
 
   console.log(JSON.stringify({ ready: true, foregroundRejected: true, conflictForwarded: true, malformedFailedClosed: true, missing: true, skillOrdering: true }));
 } finally {

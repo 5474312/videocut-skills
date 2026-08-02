@@ -7,22 +7,20 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const pluginName = "chengfeng-videocut";
 const publicSkills = [
-  "chengfeng-cut-talking-head",
-  "chengfeng-subtitle-talking-head",
-  "chengfeng-visual-talking-head",
-  "chengfeng-export-talking-head",
-  "chengfeng-finish-talking-head",
-  "chengfeng-report-videocut-bug",
-  "chengfeng-check-videocut-updates",
+  "chengfeng-cut",
+  "chengfeng-subtitle",
+  "chengfeng-visual",
+  "chengfeng-export",
+  "chengfeng-report-bug",
+  "chengfeng-check-updates",
 ];
 const displayNames = {
-  "chengfeng-cut-talking-head": "chengfeng · 剪口播",
-  "chengfeng-subtitle-talking-head": "chengfeng · 字幕",
-  "chengfeng-visual-talking-head": "chengfeng · 画面",
-  "chengfeng-export-talking-head": "chengfeng · 导出",
-  "chengfeng-finish-talking-head": "chengfeng · 口播成片",
-  "chengfeng-report-videocut-bug": "chengfeng · 上报 Bug",
-  "chengfeng-check-videocut-updates": "chengfeng · 检查更新",
+  "chengfeng-cut": "chengfeng · 剪口播",
+  "chengfeng-subtitle": "chengfeng · 字幕",
+  "chengfeng-visual": "chengfeng · 画面",
+  "chengfeng-export": "chengfeng · 导出",
+  "chengfeng-report-bug": "chengfeng · 上报 Bug",
+  "chengfeng-check-updates": "chengfeng · 检查更新",
 };
 const pluginManifest = JSON.parse(fs.readFileSync(path.join(root, ".codex-plugin", "plugin.json"), "utf8"));
 

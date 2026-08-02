@@ -1,6 +1,6 @@
 # 四个业务 Skill 的阶段合同
 
-`chengfeng-cut-talking-head` 与 `chengfeng-finish-talking-head` 都必须引用并按本合同执行。本文件是普通内部 reference，不是用户可调用的 Skill，不创建项目副本、播放器、素材库、上传会话或媒体写入能力。
+`chengfeng-cut` 必须引用并按本合同执行。本文件是普通内部 reference，不是用户可调用的 Skill，不创建项目副本、播放器、素材库、上传会话或媒体写入能力。
 
 ## 固定阶段
 

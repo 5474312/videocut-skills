@@ -54,7 +54,7 @@ Product service ensure --json
 - 健康服务会幂等复用；页面或 Codex 父终端关闭不应结束服务。
 - 返回 foreground 身份、未知端口占用、错误 URL、旧版本或不完整 JSON 时 fail-closed；Skill 不杀进程、不换 5191、不回退临时 foreground。
 - `service ensure` 不创建项目、不打开 Studio；仍只在 `*_review_ready` 后执行 `open`。
-- `chengfeng-cut-talking-head` 在项目创建后、第一次 Cuts API 前以及每次审核恢复前 ensure；`chengfeng-finish-talking-head` 在 Runtime 预检后、第一次 workflow API 前以及每次审核恢复前 ensure。
+- `chengfeng-cut` 在项目创建后、第一次 Cuts API 前以及每次审核恢复前 ensure。
 
 机器可读 capability 合同除 EDL 字段外，还要求：`serviceApiVersion=1`、完整 `serviceOperations`、`managedStudioService=true`、`serviceParentProcessIndependent=true`、`serviceCrashRestart=true`。缺少任一字段都返回 `runtime_capability_missing`。
 
