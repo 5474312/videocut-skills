@@ -43,6 +43,9 @@ codex plugin add chengfeng-videocut@chengfeng-videocut
 
 Bootstrap 仍只调用官方 `plugin marketplace add --ref <40hex>` 与 `plugin add`，随后做只读回查；它不复制 Skill 文件，也不会安装、升级、启动或修改 Product Runtime。每个 Bootstrap B 都在 manifest 中固定不可变 Plugin commit P。npm 的 GitHub git-spec 在已验证环境中不能稳定启动，因此不把 `npx github:...` 作为对外稳定安装承诺。
 
+装完插件后也可以直接对 Codex 说「**安装剪辑环境**」——「检查更新」Skill 的环境入口会
+下载校验 Runtime、跑 doctor 自检并报告缺什么，不必先发起剪辑任务。
+
 已安装后可用以下命令诊断身份（均不安装 Runtime）：
 
 ```bash

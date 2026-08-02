@@ -1,6 +1,6 @@
 ---
 name: chengfeng-check-updates
-description: 检查 chengfeng-videocut Skills 的 Marketplace 更新。用户说检查更新、检查剪辑 Skills 更新、更新 chengfeng-videocut Skills，或在已展示的可信版本后明确确认激活时使用；不用于 Runtime 更新、项目数据迁移或静默安装。
+description: 让剪辑环境就绪：检查 Skills 的 Marketplace 更新，并安装/检查产品 Runtime（doctor 自检、报告缺什么、指引升级）。用户说检查更新、安装剪辑环境、装播放器、检查剪辑环境、剪辑环境就绪了吗、配置转录凭证时使用；不用于剪辑、字幕、画面、导出本身或项目数据迁移。
 user-invocable: true
 ---
 
@@ -65,3 +65,25 @@ node "$UPDATE" --marketplace "$marketplaceName" --activate --confirmed \
 - Plugin 可升至 `0.5.1`，不等于 Runtime 更新；Runtime 最低兼容/Release 仍由 `runtime-requirements.json` 的 `0.2.0` 合同控制。
 - 不把本地 staging、legacy cache 或 local marketplace 说成 remotely updatable。
 - 不发布、不改 Product Runtime、5190、项目数据或媒体；用户确认后官方 Codex activation 是唯一写入例外。
+
+## Runtime（播放器）：安装与体检
+
+插件更新之外，本 Skill 也是环境的安装与体检入口。用户说「安装剪辑环境 / 装播放器 /
+检查环境」时，走这一节即可，不需要先发起剪辑任务。
+
+先读取并执行 [Runtime 预检](../../references/runtime-preflight.md)——它定义工具变量、
+安装缺失的 Runtime、规定失败处置（含「禁止自制替代界面」禁令）。预检 `ready` 后跑
+完整自检并原样报告：
+
+```bash
+node "$VC" doctor --json
+```
+
+报告：Runtime 版本与位置、doctor 每项检查结果、缺失项的修法（机器依赖指引安装；
+转录凭证指引 `node "$VC" config set transcription.apiKey <key>`）。
+
+**已装 Runtime 低于合同要求版本时**：报告两个版本号和差异，指引用户确认后升级
+（升级会替换 `~/.chengfeng-videocut/app`，项目数据不动）；用户未确认前不动现有安装。
+
+这一节不建项目、不打开 Studio、不转录任何媒体。装好后告诉用户：直接说「剪口播」
+就能开始。

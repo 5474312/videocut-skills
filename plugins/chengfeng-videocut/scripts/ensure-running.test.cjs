@@ -89,7 +89,7 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   const cutEnsure = cutSkill.indexOf('node "$RUNNING" --json');
   const firstCutsApi = cutSkill.indexOf('node "$VC" cuts get');
   assert.ok(cutCreate >= 0 && cutCreate < cutEnsure && cutEnsure < firstCutsApi);
-  const cutReview = cutSkill.indexOf("## 3. 到人工审核时才打开 Studio");
+  const cutReview = cutSkill.indexOf("## 4. 审核：到人工审核时才打开 Studio");
   const cutReviewEnsure = cutSkill.indexOf('node "$RUNNING" --json', cutReview);
   const cutReviewOpen = cutSkill.indexOf('node "$VC" open "$jobDir" --json', cutReview);
   assert.ok(cutReview < cutReviewEnsure && cutReviewEnsure < cutReviewOpen);

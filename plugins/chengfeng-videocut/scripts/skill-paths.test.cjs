@@ -42,15 +42,21 @@ for (const name of publicSkills) {
 for (const name of publicSkills) {
   const text = fs.readFileSync(path.join(root, "skills", name, "SKILL.md"), "utf8");
   assert.doesNotMatch(text, /\$SKILL_DIR|SKILL_DIR=/, `${name} must not require an injected SKILL_DIR`);
-  assert.match(text, /codex plugin list --json/, `${name} must resolve the enabled plugin via Codex`);
-  assert.match(text, /x\.enabled && x\.name === "chengfeng-videocut" && x\.source && x\.source\.path/, `${name} must select one enabled source.path`);
-  assert.match(text, /test -n "\$PLUGIN_ROOT" && test -f "\$PLUGIN_ROOT\/.codex-plugin\/plugin\.json"/, `${name} must validate the resolved root`);
+  assert.ok(
+    /references\/runtime-preflight\.md/.test(text) || /codex plugin list --json/.test(text),
+    `${name} must run or reference the runtime preflight`,
+  );
   const agent = fs.readFileSync(path.join(root, "skills", name, "agents", "openai.yaml"), "utf8");
   assert.match(agent, new RegExp(`\\$${pluginName}:${name}`), `${name} must use its full Plugin namespace in the default prompt`);
   assert.match(agent, new RegExp(`^  display_name: "${displayNames[name]}"$`, "m"), `${name} must expose the searchable chengfeng display name`);
 }
 
 const runtimeContract = fs.readFileSync(path.join(root, "references", "runtime-and-product-contract.md"), "utf8");
+const preflight = fs.readFileSync(path.join(root, "references", "runtime-preflight.md"), "utf8");
+assert.match(preflight, /codex plugin list --json/, "the preflight single source must resolve the plugin via Codex");
+assert.match(preflight, /x\.enabled && x\.name === "chengfeng-videocut" && x\.source && x\.source\.path/, "the preflight must select one enabled source.path");
+assert.match(preflight, /test -n "\$PLUGIN_ROOT" && test -f "\$PLUGIN_ROOT\/.codex-plugin\/plugin\.json"/, "the preflight must validate the resolved root");
+assert.match(preflight, /禁止用自制的审核页/, "the preflight must carry the no-substitute-interface ban");
 const businessContract = fs.readFileSync(path.join(root, "references", "business-workflow-contract.md"), "utf8");
 assert.match(runtimeContract, /普通内部 reference/, "shared Product boundaries must be an internal reference");
 assert.match(businessContract, /不是用户可调用的 Skill/, "shared business workflow must not be user-facing");
