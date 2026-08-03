@@ -2,6 +2,10 @@
 
 "use strict";
 
+// darwin 的托管形态是 launchd，Windows（Runtime v0.4.0 起）是计划任务 + 看门狗。
+// 跨模式（比如 win 上冒出 launchd）由 Runtime 侧判为冲突，这里只认本平台的形态。
+const EXPECTED_RUNTIME_MODE = process.platform === "win32" ? "windows-task" : "launchd";
+
 const { spawnSync } = require("node:child_process");
 const {
   RUNTIME_CONTRACT,
@@ -54,7 +58,7 @@ function isReadyService(payload) {
     data?.ready === true &&
     data?.healthy === true &&
     data?.configured === true &&
-    data?.runtimeMode === "launchd" &&
+    data?.runtimeMode === EXPECTED_RUNTIME_MODE &&
     Number.isInteger(data?.pid) && data.pid > 0 &&
     typeof data?.studioBuildId === "string" && data.studioBuildId.trim().length > 0 &&
     supportsRequiredVersion(data?.productVersion, RUNTIME_CONTRACT.minimumRuntimeVersion) &&
@@ -123,7 +127,7 @@ function main(argv = process.argv.slice(2)) {
         code: "service_identity_mismatch",
         message: "Studio 服务已响应，但 envelope、Service API、健康状态、launchd 身份、版本、PID、build 或 canonical URL 不满足 Plugin 合同。",
         details: {
-          requiredRuntimeMode: "launchd",
+          requiredRuntimeMode: EXPECTED_RUNTIME_MODE,
           minimumRuntimeVersion: RUNTIME_CONTRACT.minimumRuntimeVersion,
           canonicalUrl: CANONICAL_URL,
           actual: payload.data || null,

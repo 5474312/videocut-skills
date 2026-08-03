@@ -182,9 +182,14 @@ function resolveRuntimeInvocation(args = []) {
   const installed = findCommand(PRODUCT);
   if (installed) return { command: installed, args, cwd: process.cwd(), kind: "path" };
 
-  const managed = path.join(managedHome(), "bin", PRODUCT);
-  if (isExecutable(managed)) {
-    return { command: managed, args, cwd: process.cwd(), kind: "managed" };
+  const managedNames = process.platform === "win32"
+    ? [`${PRODUCT}.cmd`, `${PRODUCT}.exe`, PRODUCT]
+    : [PRODUCT];
+  for (const name of managedNames) {
+    const managed = path.join(managedHome(), "bin", name);
+    if (isExecutable(managed)) {
+      return { command: managed, args, cwd: process.cwd(), kind: "managed" };
+    }
   }
 
   return sourceInvocation(args);
@@ -291,7 +296,7 @@ function verifyInstaller(installer, checksumFile) {
 
 function installRuntime() {
   const directory = mkdtempSync(path.join(os.tmpdir(), "chengfeng-videocut-installer-"));
-  const installer = path.join(directory, "install.sh");
+  const installer = path.join(directory, RUNTIME_CONTRACT.installerAsset);
   const checksum = path.join(directory, RUNTIME_CONTRACT.checksumAsset);
   const targetReleaseBase = releaseBase();
   try {
@@ -304,7 +309,8 @@ function installRuntime() {
       verifyInstaller(installer, checksum);
     }
 
-    const result = spawnSync("/bin/sh", [installer], {
+    // Node 安装器跨平台（v0.4.0 起）；/bin/sh 在 Windows 不存在，也不再需要。
+    const result = spawnSync(process.execPath, [installer], {
       env: {
         ...process.env,
         // A tagged installer must consume assets from the same exact release,
@@ -342,7 +348,8 @@ function output(payload, json) {
 function main(argv = process.argv.slice(2)) {
   const json = argv.includes("--json");
   const installIfMissing = argv.includes("--install-if-missing");
-  const unknown = argv.filter((arg) => !["--json", "--install-if-missing"].includes(arg));
+  const upgrade = argv.includes("--upgrade");
+  const unknown = argv.filter((arg) => !["--json", "--install-if-missing", "--upgrade"].includes(arg));
   if (unknown.length > 0) {
     output({ ok: false, error: { code: "invalid_argument", message: `未知参数: ${unknown.join(" ")}` } }, json);
     return 2;
@@ -363,7 +370,7 @@ function main(argv = process.argv.slice(2)) {
         details: { platform: process.platform, supported: ["darwin"] },
       },
     }, json);
-    return 13;
+    return 15;
   }
 
   let runtime = inspectRuntime();
@@ -382,18 +389,19 @@ function main(argv = process.argv.slice(2)) {
     }, json);
     return 11;
   }
-  if (runtime.state === "incompatible") {
+  const upgrading = runtime.state === "incompatible" && installIfMissing && upgrade;
+  if (runtime.state === "incompatible" && !upgrading) {
     output({
       ok: false,
       error: {
         code: "runtime_capability_missing",
-        message: `当前 chengfeng-videocut Runtime 不满足 ${RUNTIME_CONTRACT.releaseTag} 合同；请升级后再继续，禁止回退旧剪辑链。`,
+        message: `当前 chengfeng-videocut Runtime 不满足 ${RUNTIME_CONTRACT.releaseTag} 合同；请升级后再继续，禁止回退旧剪辑链。用户确认后可执行 --install-if-missing --upgrade 原子升级（项目数据不动）。`,
         details: runtime,
       },
     }, json);
     return 14;
   }
-  if (!installIfMissing) {
+  if (!upgrading && !installIfMissing) {
     output({
       ok: false,
       error: { code: "runtime_missing", message: "未检测到 chengfeng-videocut。" },
@@ -401,7 +409,9 @@ function main(argv = process.argv.slice(2)) {
     return 10;
   }
 
-  process.stderr.write(`${INSTALL_NOTICE}\n`);
+  process.stderr.write(upgrading
+    ? `检测到旧版 Runtime，用户已确认，正在原子升级到 ${RUNTIME_CONTRACT.releaseTag}（项目数据不动）…\n`
+    : `${INSTALL_NOTICE}\n`);
   try {
     installRuntime();
   } catch (error) {

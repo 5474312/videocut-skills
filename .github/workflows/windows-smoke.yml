@@ -36,4 +36,4 @@ jobs:
           echo "exit=$code"
           echo "$out" | node -e 'let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const j=JSON.parse(s);if(j.ok!==false||!j.error||j.error.code!=="platform_unsupported")process.exit(1);});'
           if [ $? -ne 0 ]; then echo "错误码不是 platform_unsupported"; exit 1; fi
-          if [ "$code" != "13" ]; then echo "退出码应为 13，实际 $code"; exit 1; fi
+          if [ "$code" != "15" ]; then echo "退出码应为 15，实际 $code"; exit 1; fi

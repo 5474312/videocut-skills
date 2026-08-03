@@ -31,7 +31,7 @@ function writeExecutable(file, body) {
   fs.writeFileSync(file, body, { mode: 0o755 });
 }
 
-function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.3.0") {
+function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.4.0") {
   writeExecutable(file, `#!/bin/sh
 if [ "$1" = "--version" ]; then echo "chengfeng-videocut ${version}"; exit 0; fi
 if [ "$1" = "doctor" ]; then echo '${JSON.stringify({ schemaVersion: 1, product: "chengfeng-videocut", command: "doctor", ok: true, data: { healthy, ...(runtimeCapabilities ? { capabilities: runtimeCapabilities } : {}) } })}'; exit 0; fi
@@ -41,12 +41,12 @@ exit 2
 
 function writeRelease(directory, installerBody, checksum = true) {
   fs.mkdirSync(directory, { recursive: true });
-  const installer = path.join(directory, "install.sh");
+  const installer = path.join(directory, "install.cjs");
   writeExecutable(installer, installerBody);
   const actual = createHash("sha256").update(fs.readFileSync(installer)).digest("hex");
   fs.writeFileSync(
     path.join(directory, "SHA256SUMS.txt"),
-    `${checksum === true ? actual : String(checksum)}  install.sh\n`,
+    `${checksum === true ? actual : String(checksum)}  install.cjs\n`,
   );
   return installer;
 }
@@ -112,8 +112,8 @@ try {
   assert.equal(JSON.parse(foregroundOnly.stdout).error.code, "runtime_capability_missing");
 
   const mustNotRun = path.join(tmp, "must-not-run");
-  const overwriteInstaller = path.join(tmp, "overwrite-installer.sh");
-  writeExecutable(overwriteInstaller, `#!/bin/sh\ntouch "${mustNotRun}"\n`);
+  const overwriteInstaller = path.join(tmp, "overwrite-installer.cjs");
+  writeExecutable(overwriteInstaller, `require("node:fs").writeFileSync(${JSON.stringify(mustNotRun)}, "");\n`);
   const incompatibleInstall = run(["--install-if-missing", "--json"], {
     CHENGFENG_VIDEOCUT_BIN: oldCapableBin,
     CHENGFENG_VIDEOCUT_INSTALLER_FILE: overwriteInstaller,
@@ -122,20 +122,23 @@ try {
   assert.equal(fs.existsSync(mustNotRun), false, "an existing incompatible Runtime must never be overwritten");
 
   const installHome = path.join(tmp, "installed-home");
-  const releaseDirectory = path.join(tmp, "release-v0.3.0");
+  const releaseDirectory = path.join(tmp, "release-v0.4.0");
   const observedReleaseBase = path.join(tmp, "observed-release-base");
-  writeRelease(releaseDirectory, `#!/bin/sh
-set -eu
-printf '%s' "$CHENGFENG_VIDEOCUT_DOWNLOAD_BASE" > "${observedReleaseBase}"
-target="$CHENGFENG_VIDEOCUT_HOME/bin/chengfeng-videocut"
-mkdir -p "$(dirname "$target")"
-cat > "$target" <<'EOF'
-#!/bin/sh
-if [ "$1" = "--version" ]; then echo "chengfeng-videocut 0.3.0"; exit 0; fi
-if [ "$1" = "doctor" ]; then echo '${JSON.stringify({ schemaVersion: 1, product: "chengfeng-videocut", command: "doctor", ok: true, data: { healthy: true, capabilities } })}'; exit 0; fi
-exit 2
-EOF
-chmod +x "$target"
+  writeRelease(releaseDirectory, `
+const nodeFs = require("node:fs");
+const nodePath = require("node:path");
+nodeFs.writeFileSync(${JSON.stringify(observedReleaseBase)}, process.env.CHENGFENG_VIDEOCUT_DOWNLOAD_BASE || "");
+const target = nodePath.join(process.env.CHENGFENG_VIDEOCUT_HOME, "bin", "chengfeng-videocut");
+nodeFs.mkdirSync(nodePath.dirname(target), { recursive: true });
+const doctorPayload = ${JSON.stringify(JSON.stringify({ schemaVersion: 1, product: "chengfeng-videocut", command: "doctor", ok: true, data: { healthy: true, capabilities } }))};
+const launcher = [
+  "#!/bin/sh",
+  'if [ "$1" = "--version" ]; then echo "chengfeng-videocut 0.4.0"; exit 0; fi',
+  \`if [ "$1" = "doctor" ]; then echo '\${doctorPayload}'; exit 0; fi\`,
+  "exit 2",
+  "",
+].join("\\n");
+nodeFs.writeFileSync(target, launcher, { mode: 0o755 });
 `);
   const installed = run(["--install-if-missing", "--json"], {
     CHENGFENG_VIDEOCUT_BIN: "",
@@ -144,7 +147,7 @@ chmod +x "$target"
   });
   assert.equal(installed.status, 0, installed.stderr);
   assert.equal(JSON.parse(installed.stdout).installed, true);
-  assert.match(installed.stderr, /v0\.3\.0/);
+  assert.match(installed.stderr, /v0\.4\.0/);
   assert.equal(fs.readFileSync(observedReleaseBase, "utf8"), `file://${releaseDirectory}`);
 
   const unavailableHome = path.join(tmp, "unavailable-home");
@@ -179,8 +182,28 @@ chmod +x "$target"
   assert.equal(JSON.parse(badChecksum.stdout).error.details.reasonCode, "installer_checksum_mismatch");
   assert.equal(fs.existsSync(checksumMarker), false, "an unverified installer must never execute");
 
-  const failedInstaller = path.join(tmp, "failed-installer.sh");
-  writeExecutable(failedInstaller, "#!/bin/sh\nexit 9\n");
+  // 用户确认后的原子升级：托管位置有旧版（能力齐但版本旧）→ --upgrade 放行安装器。
+  const upgradeHome = path.join(tmp, "upgrade-home");
+  fakeRuntime(path.join(upgradeHome, "bin", "chengfeng-videocut"), true, capabilities, "0.1.1");
+  const upgraded = run(["--install-if-missing", "--upgrade", "--json"], {
+    CHENGFENG_VIDEOCUT_BIN: "",
+    CHENGFENG_VIDEOCUT_HOME: upgradeHome,
+    CHENGFENG_VIDEOCUT_RELEASE_BASE: `file://${releaseDirectory}`,
+  });
+  assert.equal(upgraded.status, 0, upgraded.stdout);
+  assert.equal(JSON.parse(upgraded.stdout).installed, true);
+  // 没有 --upgrade 时仍然拒绝覆盖（防线不因新旗标而松动）。
+  const refusedHome = path.join(tmp, "refused-home");
+  fakeRuntime(path.join(refusedHome, "bin", "chengfeng-videocut"), true, capabilities, "0.1.1");
+  const refused = run(["--install-if-missing", "--json"], {
+    CHENGFENG_VIDEOCUT_BIN: "",
+    CHENGFENG_VIDEOCUT_HOME: refusedHome,
+    CHENGFENG_VIDEOCUT_RELEASE_BASE: `file://${releaseDirectory}`,
+  });
+  assert.equal(refused.status, 14);
+
+  const failedInstaller = path.join(tmp, "failed-installer.cjs");
+  writeExecutable(failedInstaller, "process.exit(9);\n");
   const failed = run(["--install-if-missing", "--json"], {
     CHENGFENG_VIDEOCUT_BIN: "",
     CHENGFENG_VIDEOCUT_HOME: path.join(tmp, "failed-home"),

@@ -23,7 +23,23 @@ function parseArgs() {
   }
   if (!a.marketplace) stop("invalid_arguments", "--marketplace is required"); return a;
 }
-function run(bin, argv) { const r = spawnSync(bin, argv, { encoding: "utf8", env: process.env }); if (r.error || r.status !== 0) return { ok: false, command: [bin, ...argv], status: r.status, stderr: (r.stderr || r.error?.message || "").trim() }; try { return { ok: true, command: [bin, ...argv], data: JSON.parse(r.stdout) }; } catch { return { ok: false, command: [bin, ...argv], status: r.status, stderr: "Codex command did not return JSON" }; } }
+function resolveExecutable(bin) {
+  if (process.platform !== "win32" || bin.includes("\\") || bin.includes("/")) return { command: bin, prefix: [] };
+  const extensions = (process.env.PATHEXT || ".EXE;.CMD;.BAT;.COM").split(";").filter(Boolean);
+  for (const dir of (process.env.PATH || "").split(";").filter(Boolean)) {
+    for (const ext of ["", ...extensions]) {
+      const candidate = require("node:path").join(dir, bin + ext.toLowerCase());
+      try {
+        require("node:fs").accessSync(candidate);
+        return /\.(cmd|bat)$/i.test(candidate)
+          ? { command: "cmd.exe", prefix: ["/c", candidate] }
+          : { command: candidate, prefix: [] };
+      } catch { /* keep searching */ }
+    }
+  }
+  return { command: bin, prefix: [] };
+}
+function run(bin, argv) { const resolved = resolveExecutable(bin); const r = spawnSync(resolved.command, [...resolved.prefix, ...argv], { encoding: "utf8", env: process.env }); if (r.error || r.status !== 0) return { ok: false, command: [bin, ...argv], status: r.status, stderr: (r.stderr || r.error?.message || "").trim() }; try { return { ok: true, command: [bin, ...argv], data: JSON.parse(r.stdout) }; } catch { return { ok: false, command: [bin, ...argv], status: r.status, stderr: "Codex command did not return JSON" }; } }
 function rows(v) { if (Array.isArray(v)) return v; for (const k of ["marketplaces", "plugins", "items", "data"]) if (Array.isArray(v?.[k])) return v[k]; return []; }
 function marketName(v) { return v?.name || v?.id || v?.marketplace?.name; }
 function git(v) { const s = JSON.stringify(v).toLowerCase(); return v?.type === "git" || v?.kind === "git" || /\bgit\b|github\.com|https?:\/\//.test(s); }
