@@ -16,9 +16,10 @@ Plugin 根名  -> 安装与 UI 群组名，不是同名 Skill
 
 ## 安装
 
-**先说清楚一件事：下面的命令只安装 Skills 插件，不安装剪辑产品本体（播放器 / Studio）。**
-产品 Runtime 会在你第一次让 Agent 真正干活（剪口播、导出等）时自动从 GitHub Release
-下载安装——装完插件直接去找播放器是找不到的，先让 Agent 剪一次。
+下面的命令装完即可用：前两条安装 Skills 插件，后两条立即安装剪辑产品本体
+（播放器 / Studio）——从固定版本的 GitHub Release 下载并做 SHA-256 校验。
+后两条跳过也不会坏：第一次让 Agent 真正干活（剪口播、导出等）时预检会自动补装，
+只是那次任务要先等安装。
 
 **机器上需要预先装好这些**（缺任何一个，首次运行会在对应环节明确停下，不会静默跳过）：
 
@@ -39,7 +40,12 @@ Skill 合同的行为（真实发生过：Runtime 缺失时 Agent 手搓了一�
 ```bash
 codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 2092c3aadcedfbe2d70459dac797c3714bcc8fd5
 codex plugin add chengfeng-videocut@chengfeng-videocut
+PLUGIN_ROOT="$(codex plugin list --json | node -e 'let s=""; process.stdin.on("data", c => s += c); process.stdin.on("end", () => { const rows = JSON.parse(s).installed || []; const hit = rows.filter(x => x.enabled && x.name === "chengfeng-videocut" && x.source && x.source.path); if (hit.length !== 1) process.exit(1); process.stdout.write(hit[0].source.path); });')"
+node "$PLUGIN_ROOT/scripts/ensure-runtime.cjs" --install-if-missing --json
 ```
+
+后两条与业务 Skill 预检（`references/runtime-preflight.md`）用同一段 `PLUGIN_ROOT`
+解析与同一个安装脚本，不是两套安装逻辑。
 
 Bootstrap 仍只调用官方 `plugin marketplace add --ref <40hex>` 与 `plugin add`，随后做只读回查；它不复制 Skill 文件，也不会安装、升级、启动或修改 Product Runtime。每个 Bootstrap B 都在 manifest 中固定不可变 Plugin commit P。npm 的 GitHub git-spec 在已验证环境中不能稳定启动，因此不把 `npx github:...` 作为对外稳定安装承诺。
 
