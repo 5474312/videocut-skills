@@ -55,8 +55,11 @@ const runtimeContract = fs.readFileSync(path.join(root, "references", "runtime-a
 // 就绪检查（原 runtime-preflight）2026-08-03 收编进检查更新 Skill——环境的唯一管理者。
 const readiness = fs.readFileSync(path.join(root, "skills", "chengfeng-check-updates", "SKILL.md"), "utf8");
 assert.match(readiness, /codex plugin list --json/, "the readiness single source must resolve the plugin via Codex");
-assert.match(readiness, /x\.enabled && x\.name === "chengfeng-videocut" && x\.source && x\.source\.path/, "the readiness check must select one enabled source.path");
-assert.match(readiness, /test -n "\$PLUGIN_ROOT" && test -f "\$PLUGIN_ROOT\/.codex-plugin\/plugin\.json"/, "the readiness check must validate the resolved root");
+// 2026-08-03 W4：定位改两步式（命令 + Agent 内联字面路径），不再经过 shell 变量——
+// PowerShell 与 bash 的赋值语法互不兼容，胶水逻辑一律不进命令块。
+assert.match(readiness, /source\.path/, "the readiness check must select the enabled plugin source.path");
+assert.match(readiness, /\.codex-plugin\/plugin\.json/, "the readiness check must validate the resolved root");
+assert.doesNotMatch(readiness, /PLUGIN_ROOT="\$\(/, "the readiness check must not assign shell variables");
 assert.match(readiness, /禁止用自制的审核页/, "the readiness check must carry the no-substitute-interface ban");
 const businessContract = fs.readFileSync(path.join(root, "references", "business-workflow-contract.md"), "utf8");
 assert.match(runtimeContract, /普通内部 reference/, "shared Product boundaries must be an internal reference");

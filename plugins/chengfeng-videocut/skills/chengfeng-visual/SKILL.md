@@ -24,17 +24,16 @@ user-invocable: true
 ## 0. 就绪
 
 先执行 [检查更新](../chengfeng-check-updates/SKILL.md) 的「就绪检查」——skills 是否
-最新、Runtime 是否配套；工具变量 `$PLUGIN_ROOT` / `$ENSURE` / `$RUNNING` /
-`$STUDIO` / `$VC` 在那里定义。只有「就绪」才继续；「需新会话」或「停」按它的
-处置执行（含「禁止自制替代界面」禁令），业务 Skill 不自带环境逻辑。
+最新、Runtime 是否配套；**插件根**也在那里定位（本文命令里的 `<插件根>` 都代入
+那个字面路径）。只有「就绪」才继续；「需新会话」或「停」按它的处置执行
+（含「禁止自制替代界面」禁令），业务 Skill 不自带环境逻辑。
 ## 命令
 
 ```bash
-node "$VC" visual get   <project> --json
-node "$VC" visual frame <project> --cues sub-0004,sub-0005 --count 12 --out <dir> --json
-node "$VC" visual add   <project> --module modules/01-xx/index.html \
-  --cues sub-0004,sub-0005 [--zoom x,y,w,h] [--id vis-0001] --json
-node "$VC" visual remove <project> --id vis-0001 --json
+node "<插件根>/scripts/videocut-cli.cjs" visual get   <project> --json
+node "<插件根>/scripts/videocut-cli.cjs" visual frame <project> --cues sub-0004,sub-0005 --count 12 --out <dir> --json
+node "<插件根>/scripts/videocut-cli.cjs" visual add   <project> --module modules/01-xx/index.html --cues sub-0004,sub-0005 [--zoom x,y,w,h] [--id vis-0001] --json
+node "<插件根>/scripts/videocut-cli.cjs" visual remove <project> --id vis-0001 --json
 ```
 
 层绑**字幕屏**（`--cues`），产品自己换算成词 id——层永远不可能绑上没人说的词，

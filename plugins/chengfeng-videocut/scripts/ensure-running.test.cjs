@@ -85,19 +85,19 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   const script = fs.readFileSync(ensureRunning, "utf8");
   assert.doesNotMatch(script, /launchctl|nohup/);
 
-  const cutCreate = cutSkill.indexOf('node "$VC" project create');
-  const cutEnsure = cutSkill.indexOf('node "$RUNNING" --json');
-  const firstCutsApi = cutSkill.indexOf('node "$VC" cuts get');
+  const cutCreate = cutSkill.indexOf('node "<插件根>/scripts/videocut-cli.cjs" project create');
+  const cutEnsure = cutSkill.indexOf('node "<插件根>/scripts/ensure-running.cjs" --json');
+  const firstCutsApi = cutSkill.indexOf('node "<插件根>/scripts/videocut-cli.cjs" cuts get');
   assert.ok(cutCreate >= 0 && cutCreate < cutEnsure && cutEnsure < firstCutsApi);
   const cutReview = cutSkill.indexOf("## 5. 审核：到人工审核时才打开 Studio");
-  const cutReviewEnsure = cutSkill.indexOf('node "$RUNNING" --json', cutReview);
-  const cutReviewOpen = cutSkill.indexOf('node "$VC" open "$jobDir" --json', cutReview);
+  const cutReviewEnsure = cutSkill.indexOf('node "<插件根>/scripts/ensure-running.cjs" --json', cutReview);
+  const cutReviewOpen = cutSkill.indexOf('node "<插件根>/scripts/videocut-cli.cjs" open "<项目目录>" --json', cutReview);
   assert.ok(cutReview < cutReviewEnsure && cutReviewEnsure < cutReviewOpen);
   // 剪口播到账本为止：确认卡与物理剪切已经搬进导出 Skill。留在这里会让剪刀
   // 落在用户确认之后又改出来的那一版上。
   assert.doesNotMatch(cutSkill, /cuts apply/, "cut must not perform the physical cut");
   assert.doesNotMatch(cutSkill, /show_workflow_confirmation/, "the confirmation card belongs to export");
-  assert.doesNotMatch(cutSkill, /node "\$VC" start|nohup|launchctl/);
+  assert.doesNotMatch(cutSkill, /videocut-cli\.cjs" start|nohup|launchctl/);
 
   // 导出：现在是成片导出，不是物理剪切。它只读、只产出一个新文件，所以确认卡和
   // 「冻结 revision 再剪」整套都不适用了 —— 那套守的是「剪刀落在用户没看过的
@@ -112,7 +112,7 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   assert.match(exportSkill, /不许用预览截图/, "the preview cannot be evidence for the film");
   assert.match(exportSkill, /human listening UNVERIFIED/, "nobody listened until somebody listened");
   assert.match(exportSkill, /color-scheme: dark/, "the白板 fault must stay in the lookup table");
-  assert.doesNotMatch(exportSkill, /node "\$VC" start|nohup|launchctl/);
+  assert.doesNotMatch(exportSkill, /videocut-cli\.cjs" start|nohup|launchctl/);
 
   // 字幕：只需要账本。这三条守的是它「不做什么」——
   // 旧版要求先导出 source_cut.mp4、再转写剪后视频、最后 artifact put 发布 SRT，
@@ -133,13 +133,13 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   // 正是为了说明它是上一版遗留、做字幕不要用。
   assert.doesNotMatch(
     subtitleSkill,
-    /node "\$VC" (transcribe|transcript retranscribe)/,
+    /videocut-cli\.cjs" (transcribe|transcript retranscribe)/,
     "re-transcribing to get cut-timeline times is arithmetic the ledger already answers",
   );
   // 词典是每次转录都要过的一道闸，不是可选步骤 —— 同一段音频转两遍，
   // 第二遍把 Grok 听成了 Clock / Gokul / Glock。
   assert.match(subtitleSkill, /transcript dictionary/, "subtitles must run the dictionary");
-  assert.doesNotMatch(subtitleSkill, /node "\$VC" start|nohup|launchctl/);
+  assert.doesNotMatch(subtitleSkill, /videocut-cli\.cjs" start|nohup|launchctl/);
 
   // 画面：看在放之前，量在画之前。这三条守的是流程里最容易被跳过的两步。
   const frameStep = visualSkill.indexOf("visual frame");
@@ -151,7 +151,7 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   // 模块契约的两条命门：少一条就是一类已经发生过的事故。
   assert.match(visualContract, /color-scheme: dark/, "modules must declare the host color scheme");
   assert.match(visualContract, /drawSVG/, "the paid-plugin trap must stay documented");
-  assert.doesNotMatch(visualSkill, /node "\$VC" start|nohup|launchctl/);
+  assert.doesNotMatch(visualSkill, /videocut-cli\.cjs" start|nohup|launchctl/);
 
   console.log(JSON.stringify({ ready: true, foregroundRejected: true, conflictForwarded: true, malformedFailedClosed: true, missing: true, skillOrdering: true }));
 } finally {

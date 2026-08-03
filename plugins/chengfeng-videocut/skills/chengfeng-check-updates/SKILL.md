@@ -14,26 +14,27 @@ user-invocable: true
 
 三步走完，输出三态之一：**就绪 / 需新会话 / 停**。
 
-### 一、定位插件与工具变量
+### 一、定位插件根（两步，不经过 shell 变量）
 
-从 Codex 已启用 Plugin 列表精确取得 `chengfeng-videocut` 的 `source.path`。
-`SKILL_DIR` 不是 Codex 保证注入的变量；禁止依赖它、硬编码开发机路径或用 `find`
-猜测安装目录：
+命令块不用 shell 变量与命令替换——bash 和 PowerShell 的赋值语法互不兼容，
+胶水逻辑一律由 Agent 自己完成：
 
 ```bash
-PLUGIN_ROOT="$(codex plugin list --json | node -e 'let s=""; process.stdin.on("data", c => s += c); process.stdin.on("end", () => { const rows = JSON.parse(s).installed || []; const hit = rows.filter(x => x.enabled && x.name === "chengfeng-videocut" && x.source && x.source.path); if (hit.length !== 1) process.exit(1); process.stdout.write(hit[0].source.path); });')"
-test -n "$PLUGIN_ROOT" && test -f "$PLUGIN_ROOT/.codex-plugin/plugin.json" || { echo "chengfeng-videocut enabled plugin root unavailable" >&2; exit 1; }
-ENSURE="$PLUGIN_ROOT/scripts/ensure-runtime.cjs"
-RUNNING="$PLUGIN_ROOT/scripts/ensure-running.cjs"
-STUDIO="$PLUGIN_ROOT/scripts/ensure-studio.cjs"
-VC="$PLUGIN_ROOT/scripts/videocut-cli.cjs"
-UPDATE="$PLUGIN_ROOT/scripts/check-plugin-update.cjs"
+codex plugin list --json
 ```
+
+从输出的 `installed` 列表里找 **`enabled` 为 true 且 `name` 为 `chengfeng-videocut`
+的唯一一行**，取它的 `source.path`——这就是**插件根**；再用你的文件工具确认
+`<插件根>/.codex-plugin/plugin.json` 存在。命中不是恰好一行、或该文件不存在，
+停止并报告插件未正确安装。
+
+**此后所有命令里的 `<插件根>` 都代入这个字面路径**（含空格时整段引号包住）。
+禁止依赖未保证存在的 `SKILL_DIR`、硬编码开发机路径或用目录搜索猜测安装位置。
 
 ### 二、skills 最新吗
 
 ```bash
-node "$UPDATE" --marketplace chengfeng-videocut --json
+node "<插件根>/scripts/check-plugin-update.cjs" --marketplace chengfeng-videocut --json
 ```
 
 （Marketplace 名默认 `chengfeng-videocut`；用户自己配过别的名字就用他配的。）
@@ -50,7 +51,7 @@ node "$UPDATE" --marketplace chengfeng-videocut --json
 ### 三、Runtime 配套吗
 
 ```bash
-node "$ENSURE" --install-if-missing --json
+node "<插件根>/scripts/ensure-runtime.cjs" --install-if-missing --json
 ```
 
 - `ready` → **就绪**，业务 Skill 继续
@@ -69,7 +70,7 @@ node "$ENSURE" --install-if-missing --json
 
 缺任何一个，安装会在对应环节明确停下（不静默跳过）：
 Bun ≥ 1.2、Node.js、curl、ffmpeg ≥ 6、Google Chrome（导出用）。
-云端转录另需火山引擎凭证：`node "$VC" config set transcription.apiKey <key>`。
+云端转录另需火山引擎凭证：`node "<插件根>/scripts/videocut-cli.cjs" config set transcription.apiKey <key>`。
 
 详细协议见 [Runtime 与产品契约](../../references/runtime-and-product-contract.md)。
 
@@ -78,13 +79,13 @@ Bun ≥ 1.2、Node.js、curl、ffmpeg ≥ 6、Google Chrome（导出用）。
 只允许 Codex 官方 Marketplace 命令处理快照和激活。纯查看（不 refresh、不打网络）：
 
 ```bash
-node "$UPDATE" --marketplace "$marketplaceName" --inspect --json
+node "<插件根>/scripts/check-plugin-update.cjs" --marketplace "<市场名>" --inspect --json
 ```
 
 带 refresh 的检查（用户明确说「检查更新」，或就绪检查第二步）：
 
 ```bash
-node "$UPDATE" --marketplace "$marketplaceName" --json
+node "<插件根>/scripts/check-plugin-update.cjs" --marketplace "<市场名>" --json
 ```
 
 - `current`：报告 current/latest、Marketplace 与已刷新事实。
@@ -98,9 +99,7 @@ node "$UPDATE" --marketplace "$marketplaceName" --json
 确认必须发生在用户已看见 exact available version、ref 与 checksum 之后：
 
 ```bash
-node "$UPDATE" --marketplace "$marketplaceName" --activate --confirmed \
-  --expected-version "$shownVersion" --expected-ref "$shownImmutableRef" \
-  --expected-sha256 "$shownPublisherSha256" --json
+node "<插件根>/scripts/check-plugin-update.cjs" --marketplace "<市场名>" --activate --confirmed --expected-version "<展示过的版本>" --expected-ref "<展示过的40位commit>" --expected-sha256 "<展示过的包SHA256>" --json
 ```
 
 脚本通过官方 `codex plugin marketplace upgrade` 刷新 Git snapshot，重算 snapshot 内候选包的文件清单 SHA-256，并比对三个 `--expected-*` 值；随后才使用官方 `codex plugin add`。没有独立 stage：官方 refresh 的 snapshot 是唯一可检查来源。它必须从 `plugin add` 返回的 installed cache 路径复读 version、immutable ref、publisher SHA-256，并重算同一 inventory digest；Codex list 不含 ref/checksum 时只接受 installed `.codex-plugin/update-provenance.json` 的可验证来源，缺失即失败。只有四项都等于候选才报告 `activated`。激活成功后告知用户重启 Codex 或新开会话。
@@ -112,11 +111,11 @@ node "$UPDATE" --marketplace "$marketplaceName" --activate --confirmed \
 直接跑完整就绪检查；拿到「就绪」后再跑完整自检并原样报告：
 
 ```bash
-node "$VC" doctor --json
+node "<插件根>/scripts/videocut-cli.cjs" doctor --json
 ```
 
 报告：Runtime 版本与位置、doctor 每项检查结果、缺失项的修法（机器依赖指引安装；
-转录凭证指引 `node "$VC" config set transcription.apiKey <key>`）。
+转录凭证指引 `node "<插件根>/scripts/videocut-cli.cjs" config set transcription.apiKey <key>`）。
 装好后告诉用户：直接说「剪口播」就能开始。
 
 ## 边界
