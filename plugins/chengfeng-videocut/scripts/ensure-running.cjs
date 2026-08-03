@@ -2,6 +2,15 @@
 
 "use strict";
 
+// Node 拒绝直接 spawn .cmd/.bat（CVE-2024-27980 后策略）；Windows 启动器经 cmd.exe 转发。
+function windowsSafeInvocation(command, args) {
+  if (process.platform === "win32" && /\.(cmd|bat)$/i.test(command)) {
+    return { command: process.env.ComSpec || "cmd.exe", args: ["/d", "/s", "/c", command, ...args] };
+  }
+  return { command, args };
+}
+
+
 // darwin 的托管形态是 launchd，Windows（Runtime v0.4.0 起）是计划任务 + 看门狗。
 // 跨模式（比如 win 上冒出 launchd）由 Runtime 侧判为冲突，这里只认本平台的形态。
 const EXPECTED_RUNTIME_MODE = process.platform === "win32" ? "windows-task" : "launchd";
@@ -106,7 +115,7 @@ function main(argv = process.argv.slice(2)) {
     return 10;
   }
 
-  const result = spawnSync(invocation.command, invocation.args, {
+  const result = spawnSync(...(({ command, args }) => [command, args])(windowsSafeInvocation(invocation.command, invocation.args)), {
     cwd: invocation.cwd,
     env: process.env,
     encoding: "utf8",
