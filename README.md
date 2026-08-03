@@ -44,8 +44,8 @@ PLUGIN_ROOT="$(codex plugin list --json | node -e 'let s=""; process.stdin.on("d
 node "$PLUGIN_ROOT/scripts/ensure-runtime.cjs" --install-if-missing --json
 ```
 
-后两条与业务 Skill 预检（`references/runtime-preflight.md`）用同一段 `PLUGIN_ROOT`
-解析与同一个安装脚本，不是两套安装逻辑。
+后两条与「检查更新」Skill 的就绪检查用同一段 `PLUGIN_ROOT` 解析与同一个安装脚本，
+不是两套安装逻辑（就绪检查是环境的唯一真本，业务 Skill 只引用它）。
 
 Bootstrap 仍只调用官方 `plugin marketplace add --ref <40hex>` 与 `plugin add`，随后做只读回查；它不复制 Skill 文件，也不会安装、升级、启动或修改 Product Runtime。每个 Bootstrap B 都在 manifest 中固定不可变 Plugin commit P。npm 的 GitHub git-spec 在已验证环境中不能稳定启动，因此不把 `npx github:...` 作为对外稳定安装承诺。
 
