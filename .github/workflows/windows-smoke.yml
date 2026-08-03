@@ -1,0 +1,39 @@
+name: windows-smoke
+
+# Windows 靶机：在真实 x64 Windows 上钉住当前行为。
+# 现阶段的正确行为 = 礼貌拒绝（platform_unsupported），而不是崩在 /bin/sh。
+# Windows 支持逐层落地时，这个文件跟着从「断言拒绝」演进为「断言能跑」。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 全部插件脚本语法必须在 Windows Node 下可解析
+        shell: bash
+        run: |
+          set -e
+          for f in plugins/chengfeng-videocut/scripts/*.cjs; do
+            node --check "$f"
+          done
+
+      - name: ensure-runtime 在 Windows 必须礼貌拒绝，不许崩在 /bin/sh
+        shell: bash
+        run: |
+          set +e
+          out=$(node plugins/chengfeng-videocut/scripts/ensure-runtime.cjs --install-if-missing --json)
+          code=$?
+          echo "$out"
+          echo "exit=$code"
+          echo "$out" | node -e 'let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const j=JSON.parse(s);if(j.ok!==false||!j.error||j.error.code!=="platform_unsupported")process.exit(1);});'
+          if [ $? -ne 0 ]; then echo "错误码不是 platform_unsupported"; exit 1; fi
+          if [ "$code" != "13" ]; then echo "退出码应为 13，实际 $code"; exit 1; fi

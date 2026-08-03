@@ -21,6 +21,9 @@ Plugin 根名  -> 安装与 UI 群组名，不是同名 Skill
 「检查更新」的就绪检查会自动从固定版本的 GitHub Release 下载、SHA-256 校验并安装，
 只是那一次任务要先等几分钟安装。
 
+**系统要求：macOS**（Apple Silicon / Intel）。Windows 暂不支持——安装时会得到明确的
+`platform_unsupported` 提示而不是模糊报错；Windows 支持已在路线图，需求请开 Issue 登记。
+
 **机器上需要预先装好这些**（缺任何一个，首次运行会在对应环节明确停下，不会静默跳过）：
 
 | 依赖 | 用途 | 要求 |

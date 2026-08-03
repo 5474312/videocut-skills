@@ -348,6 +348,24 @@ function main(argv = process.argv.slice(2)) {
     return 2;
   }
 
+  // 平台闸门：产品 Runtime（launchd 服务、sh 安装器、macOS 打包）目前仅支持 macOS。
+  // 在这里明确拒绝，胜过让 Windows 用户在 /bin/sh 处得到一个 exit code null 的谜团。
+  // CHENGFENG_VIDEOCUT_ALLOW_UNSUPPORTED_PLATFORM 仅供移植开发与 CI 使用。
+  if (process.platform !== "darwin" && !process.env.CHENGFENG_VIDEOCUT_ALLOW_UNSUPPORTED_PLATFORM) {
+    output({
+      ok: false,
+      error: {
+        code: "platform_unsupported",
+        message:
+          `chengfeng-videocut 目前仅支持 macOS，当前系统（${process.platform}）暂不支持；` +
+          "Windows 支持已在路线图。请不要用自制替代方案继续剪辑流程——" +
+          "可在 GitHub 仓库开 Issue 登记需求，支持进展会在 README 公布。",
+        details: { platform: process.platform, supported: ["darwin"] },
+      },
+    }, json);
+    return 13;
+  }
+
   let runtime = inspectRuntime();
   if (runtime.state === "ready") {
     output({ ok: true, installed: false, runtime }, json);
