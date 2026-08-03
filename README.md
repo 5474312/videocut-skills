@@ -16,10 +16,10 @@ Plugin 根名  -> 安装与 UI 群组名，不是同名 Skill
 
 ## 安装
 
-下面的命令装完即可用：前两条安装 Skills 插件，后两条立即安装剪辑产品本体
-（播放器 / Studio）——从固定版本的 GitHub Release 下载并做 SHA-256 校验。
-后两条跳过也不会坏：第一次让 Agent 真正干活（剪口播、导出等）时预检会自动补装，
-只是那次任务要先等安装。
+一行命令装插件（挂市场 + 安装，`&&` 串联，第一步成功才执行第二步）。
+播放器 / Studio 不需要单独装：第一次让 Agent 真正干活（剪口播、导出等）时，
+「检查更新」的就绪检查会自动从固定版本的 GitHub Release 下载、SHA-256 校验并安装，
+只是那一次任务要先等几分钟安装。
 
 **机器上需要预先装好这些**（缺任何一个，首次运行会在对应环节明确停下，不会静默跳过）：
 
@@ -38,14 +38,12 @@ Skill 合同的行为（真实发生过：Runtime 缺失时 Agent 手搓了一�
 当前公开 Plugin P 是 `0.7.0`；发布后将由 Bootstrap manifest 固定其不可变 40-hex commit。直接使用 Codex Marketplace 安装：
 
 ```bash
-codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 686dc3b8729cec9d9c9878e19b35c76ba65ce1b3
-codex plugin add chengfeng-videocut@chengfeng-videocut
-PLUGIN_ROOT="$(codex plugin list --json | node -e 'let s=""; process.stdin.on("data", c => s += c); process.stdin.on("end", () => { const rows = JSON.parse(s).installed || []; const hit = rows.filter(x => x.enabled && x.name === "chengfeng-videocut" && x.source && x.source.path); if (hit.length !== 1) process.exit(1); process.stdout.write(hit[0].source.path); });')"
-node "$PLUGIN_ROOT/scripts/ensure-runtime.cjs" --install-if-missing --json
+codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 686dc3b8729cec9d9c9878e19b35c76ba65ce1b3 && codex plugin add chengfeng-videocut@chengfeng-videocut
 ```
 
-后两条与「检查更新」Skill 的就绪检查用同一段 `PLUGIN_ROOT` 解析与同一个安装脚本，
-不是两套安装逻辑（就绪检查是环境的唯一真本，业务 Skill 只引用它）。
+两段必须分开是 Codex 官方 CLI 的机制：市场与插件是两层（一个市场可挂多个插件），
+`plugin add` 只能从已挂市场的快照安装，没有「直接从 Git 一步装」的形式。
+想装完立即拿到播放器（不等首次任务），装完插件后对 Codex 说「**安装剪辑环境**」即可。
 
 Bootstrap 仍只调用官方 `plugin marketplace add --ref <40hex>` 与 `plugin add`，随后做只读回查；它不复制 Skill 文件，也不会安装、升级、启动或修改 Product Runtime。每个 Bootstrap B 都在 manifest 中固定不可变 Plugin commit P。npm 的 GitHub git-spec 在已验证环境中不能稳定启动，因此不把 `npx github:...` 作为对外稳定安装承诺。
 
