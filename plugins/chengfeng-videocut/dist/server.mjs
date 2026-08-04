@@ -6707,7 +6707,7 @@ var review_confirm_default = `<!doctype html>
 // package.json
 var package_default = {
   name: "chengfeng-videocut-codex-plugin",
-  version: "0.10.2",
+  version: "0.10.3",
   private: true,
   type: "module",
   scripts: {
