@@ -49,7 +49,7 @@ Skill 合同的行为（真实发生过：Runtime 缺失时 Agent 手搓了一�
 当前公开 Plugin P 是 `0.10.0`；发布后将由 Bootstrap manifest 固定其不可变 40-hex commit。直接使用 Codex Marketplace 安装：
 
 ```bash
-codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 4850968857d64c78752b198e1edffacf5fcdb821 && codex plugin add chengfeng-videocut@chengfeng-videocut
+codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 5849bf80f2851fd86a57c327d6a6107b6a5214e3 && codex plugin add chengfeng-videocut@chengfeng-videocut
 ```
 
 两段必须分开是 Codex 官方 CLI 的机制：市场与插件是两层（一个市场可挂多个插件），
