@@ -6704,6 +6704,22 @@ var review_confirm_default = `<!doctype html>
   </body>
 </html>
 `;
+// package.json
+var package_default = {
+  name: "chengfeng-videocut-codex-plugin",
+  version: "0.10.2",
+  private: true,
+  type: "module",
+  scripts: {
+    build: "bun build server.mjs --target=node --format=esm --outfile=dist/server.mjs",
+    test: "node scripts/runtime-preflight.test.cjs && node scripts/ensure-running.test.cjs && node scripts/studio-capability.test.cjs && node scripts/bug-report.test.cjs && node scripts/skill-paths.test.cjs && node scripts/business-workflow-contract.test.cjs && node scripts/check-plugin-update.test.cjs && node scripts/mcp-smoke-test.mjs"
+  },
+  dependencies: {
+    "@modelcontextprotocol/ext-apps": "1.0.1",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    zod: "3.25.76"
+  }
+};
 
 // node_modules/zod/v3/external.js
 var exports_external = {};
@@ -27302,7 +27318,7 @@ var optionSchema = exports_external.object({
   description: exports_external.string(),
   nextStep: exports_external.string()
 });
-var server = new McpServer({ name: "chengfeng-videocut", version: "0.5.1" });
+var server = new McpServer({ name: "chengfeng-videocut", version: package_default.version });
 ak(server, "workflow-confirm-card", templateUri, {}, async () => ({
   contents: [{
     uri: templateUri,

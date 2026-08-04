@@ -1,4 +1,5 @@
 import widgetHtml from "./public/review-confirm.html" with { type: "text" };
+import packageManifest from "./package.json" with { type: "json" };
 import {
   registerAppResource,
   registerAppTool,
@@ -84,7 +85,8 @@ const optionSchema = z.object({
   nextStep: z.string(),
 });
 
-const server = new McpServer({ name: "chengfeng-videocut", version: "0.5.1" });
+// 版本跟随 package.json，避免再次出现「dist 里冻着老版本号」的漂移。
+const server = new McpServer({ name: "chengfeng-videocut", version: packageManifest.version });
 
 registerAppResource(
   server,
