@@ -31,7 +31,7 @@ function writeExecutable(file, body) {
   fs.writeFileSync(file, body, { mode: 0o755 });
 }
 
-function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.4.4") {
+function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.4.5") {
   writeExecutable(file, `#!/bin/sh
 if [ "$1" = "--version" ]; then echo "chengfeng-videocut ${version}"; exit 0; fi
 if [ "$1" = "doctor" ]; then echo '${JSON.stringify({ schemaVersion: 1, product: "chengfeng-videocut", command: "doctor", ok: true, data: { healthy, ...(runtimeCapabilities ? { capabilities: runtimeCapabilities } : {}) } })}'; exit 0; fi
@@ -122,7 +122,7 @@ try {
   assert.equal(fs.existsSync(mustNotRun), false, "an existing incompatible Runtime must never be overwritten");
 
   const installHome = path.join(tmp, "installed-home");
-  const releaseDirectory = path.join(tmp, "release-v0.4.4");
+  const releaseDirectory = path.join(tmp, "release-v0.4.5");
   const observedReleaseBase = path.join(tmp, "observed-release-base");
   writeRelease(releaseDirectory, `
 const nodeFs = require("node:fs");
@@ -133,7 +133,7 @@ nodeFs.mkdirSync(nodePath.dirname(target), { recursive: true });
 const doctorPayload = ${JSON.stringify(JSON.stringify({ schemaVersion: 1, product: "chengfeng-videocut", command: "doctor", ok: true, data: { healthy: true, capabilities } }))};
 const launcher = [
   "#!/bin/sh",
-  'if [ "$1" = "--version" ]; then echo "chengfeng-videocut 0.4.4"; exit 0; fi',
+  'if [ "$1" = "--version" ]; then echo "chengfeng-videocut 0.4.5"; exit 0; fi',
   \`if [ "$1" = "doctor" ]; then echo '\${doctorPayload}'; exit 0; fi\`,
   "exit 2",
   "",
@@ -147,7 +147,7 @@ nodeFs.writeFileSync(target, launcher, { mode: 0o755 });
   });
   assert.equal(installed.status, 0, installed.stderr);
   assert.equal(JSON.parse(installed.stdout).installed, true);
-  assert.match(installed.stderr, /v0\.4\.4/);
+  assert.match(installed.stderr, /v0\.4\.5/);
   assert.equal(fs.readFileSync(observedReleaseBase, "utf8"), `file://${releaseDirectory}`);
 
   const unavailableHome = path.join(tmp, "unavailable-home");
