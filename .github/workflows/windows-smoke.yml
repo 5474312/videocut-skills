@@ -1,8 +1,7 @@
 name: windows-smoke
 
-# Windows 靶机：在真实 x64 Windows 上钉住当前行为。
-# 现阶段的正确行为 = 礼貌拒绝（platform_unsupported），而不是崩在 /bin/sh。
-# Windows 支持逐层落地时，这个文件跟着从「断言拒绝」演进为「断言能跑」。
+# Windows 靶机：在真实 x64 Windows 上钉住行为。
+# 2026-08-03 起 Windows 正式支持，断言从「礼貌拒绝」翻成「真的装得上」。
 
 on:
   push:
@@ -26,14 +25,14 @@ jobs:
             node --check "$f"
           done
 
-      - name: ensure-runtime 在 Windows 必须礼貌拒绝，不许崩在 /bin/sh
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: ensure-runtime 在 Windows 必须真的装得上
         shell: bash
         run: |
-          set +e
-          out=$(node plugins/chengfeng-videocut/scripts/ensure-runtime.cjs --install-if-missing --json)
-          code=$?
-          echo "$out"
-          echo "exit=$code"
-          echo "$out" | node -e 'let s="";process.stdin.on("data",c=>s+=c);process.stdin.on("end",()=>{const j=JSON.parse(s);if(j.ok!==false||!j.error||j.error.code!=="platform_unsupported")process.exit(1);});'
-          if [ $? -ne 0 ]; then echo "错误码不是 platform_unsupported"; exit 1; fi
-          if [ "$code" != "15" ]; then echo "退出码应为 15，实际 $code"; exit 1; fi
+          set -e
+          node plugins/chengfeng-videocut/scripts/ensure-runtime.cjs --install-if-missing --json > out.json
+          cat out.json
+          node -e 'const j=require("./out.json"); if(j.ok!==true||j.runtime?.state!=="ready") process.exit(1); console.log("runtime ready:", j.runtime.runtimeVersion)'

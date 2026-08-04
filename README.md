@@ -21,24 +21,32 @@ Plugin 根名  -> 安装与 UI 群组名，不是同名 Skill
 「检查更新」的就绪检查会自动从固定版本的 GitHub Release 下载、SHA-256 校验并安装，
 只是那一次任务要先等几分钟安装。
 
-**系统要求：macOS**（Apple Silicon / Intel）。Windows 暂不支持——安装时会得到明确的
-`platform_unsupported` 提示而不是模糊报错；Windows 支持已在路线图，需求请开 Issue 登记。
+**系统要求：macOS**（Apple Silicon / Intel）**或 Windows 10/11**。
+Windows 支持自 Runtime v0.4.1 起正式可用（真机验收：安装、常驻服务、崩溃自愈、
+重启自启、建档、导出成片全链通过）。虚拟机里试用 Windows 11 24H2+ 需先关 VBS：
+`bcdedit /set {default} hypervisorlaunchtype off`（物理机不受影响）。
 
 **机器上需要预先装好这些**（缺任何一个，首次运行会在对应环节明确停下，不会静默跳过）：
 
 | 依赖 | 用途 | 要求 |
 | --- | --- | --- |
 | Bun | 运行产品 Runtime | ≥ 1.2 |
-| Node.js | Skill 预检脚本 | 近代版本即可 |
-| curl | 下载 Release | 系统自带即可 |
-| ffmpeg | 剪辑与导出 | ≥ 6 |
+| Node.js | Skill 就绪检查脚本 | 近代版本即可 |
+| ffmpeg | 剪辑与导出 | ≥ 6（含 ffprobe） |
 | Google Chrome | 导出成片时渲染字幕和动画 | 桌面版 |
+
+```bash
+# macOS
+brew install oven-sh/bun/bun node ffmpeg      # Chrome 从官网装
+# Windows（装完新开一个终端，PATH 才生效）
+winget install Oven-sh.Bun OpenJS.NodeJS.LTS Gyan.FFmpeg Google.Chrome
+```
 
 **Runtime 装不上时，Agent 应停在安装指引上**——用自制审核页/播放器替代产品属于违反
 Skill 合同的行为（真实发生过：Runtime 缺失时 Agent 手搓了一个"审片台"，产出与产品
 完全不兼容）。遇到这种情况，把 Agent 的报错原文发 Issue。
 
-当前公开 Plugin P 是 `0.9.0`；发布后将由 Bootstrap manifest 固定其不可变 40-hex commit。直接使用 Codex Marketplace 安装：
+当前公开 Plugin P 是 `0.10.0`；发布后将由 Bootstrap manifest 固定其不可变 40-hex commit。直接使用 Codex Marketplace 安装：
 
 ```bash
 codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 4850968857d64c78752b198e1edffacf5fcdb821 && codex plugin add chengfeng-videocut@chengfeng-videocut
@@ -84,7 +92,7 @@ Runtime 默认安装到：
 ~/.chengfeng-videocut
 ```
 
-Plugin 0.9.0 的产品合同固定为 `v0.4.0` Release、Runtime 0.4.0+ EDL 与用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。首次安装会从这个精确 Release 下载 `install.sh` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退 v0.1.1。
+Plugin 0.10.0 的产品合同固定为 `v0.4.1` Release、Runtime 0.4.1+ EDL 与用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。首次安装会从这个精确 Release 下载 `install.sh` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退 v0.1.1。
 
 每个业务流程在第一次产品 API 前、每次人工审核恢复前都会执行共享 `ensure-running`：
 
@@ -152,7 +160,7 @@ shared ensure-runtime
   v
 GitHub Release Runtime
   |
-  +-- service ensure -> macOS user service
+  +-- service ensure -> macOS LaunchAgent / Windows 计划任务
   +-- CLI / API
   +-- project truth + revision / CAS
   +-- media cut / render / verify
