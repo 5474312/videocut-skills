@@ -66,7 +66,8 @@ node "<插件根>/scripts/videocut-cli.cjs" cuts get "<项目目录>" --json
   编译器，只在恢复中断或明确刷新时用，中断了直接重跑即可
 - `project create` 是唯一入口：不经过素材库、上传会话或额外 Skill；Skill 不得先写
   `project.json`
-- 服务必须由脚本确认 `healthy=true`、`runtimeMode=launchd`、版本兼容、URL 为
+- 服务必须由脚本确认 `healthy=true`、`runtimeMode=launchd`（macOS）或
+  `runtimeMode=windows-task`（Windows）、版本兼容、URL 为
   canonical 5190 后才继续；失败透传结构化错误并停止，禁止回退 foreground、换端口、
   杀未知进程
 - 两份 readback 必须指向同一个 `projectId`，保存 workflow stage 与

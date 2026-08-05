@@ -6,6 +6,8 @@ name: windows-smoke
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -53,3 +55,22 @@ jobs:
           cat out.json
           set -e
           node -e 'const j=require("./out.json"); if(j.ok!==true||j.runtime?.state!=="ready") process.exit(1); console.log("runtime ready:", j.runtime.runtimeVersion)'
+
+  plugin-update:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: 安装 Plugin 测试依赖
+        shell: pwsh
+        run: npm --prefix plugins/chengfeng-videocut ci
+      - name: Plugin 全量回归、精确 pin、pnpm shim 与 MCP cache 释放
+        shell: pwsh
+        run: |
+          node --test test/bootstrap.test.cjs
+          npm --prefix plugins/chengfeng-videocut test
