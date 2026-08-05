@@ -29,16 +29,22 @@ Windows 支持自 Runtime v0.4.2 起正式可用（真机验收：安装、常�
 重启自启、建档、导出成片全链通过）。虚拟机里试用 Windows 11 24H2+ 需先关 VBS：
 `bcdedit /set {default} hypervisorlaunchtype off`（物理机不受影响）。
 
-**机器上需要预先装好这些**（缺任何一个，首次运行会在对应环节明确停下，不会静默跳过）：
+推荐安装桌面预览包：它自带 Runtime、Bun、FFmpeg 与 FFprobe，并把它们安装到
+`~/.chengfeng-videocut` 的统一受管目录；Plugin 与桌面 App 复用同一个稳定 CLI 和
+后台服务，不需要把这些可执行文件加入系统 PATH。
+
+桌面路径仍需要 Node.js 运行 Skill 脚本 / MCP Server，需要 Chrome 导出字幕和动画。
+只使用 Plugin + CLI 便携包时，还需自行准备 Bun 与 FFmpeg：
 
 | 依赖 | 用途 | 要求 |
 | --- | --- | --- |
-| Bun | 运行产品 Runtime | ≥ 1.2 |
+| Bun | 运行产品 Runtime；桌面包已内置 | ≥ 1.2 |
 | Node.js | Skill 脚本、MCP Server 与 Runtime 安装器 | ≥ 20 |
-| ffmpeg | 剪辑与导出 | ≥ 6（含 ffprobe） |
+| ffmpeg | 剪辑与导出；桌面包已内置 | ≥ 6（含 ffprobe） |
 | Google Chrome | 导出成片时渲染字幕和动画 | 桌面版 |
 
 ```bash
+# 仅 Plugin + CLI 路径需要手工补齐这些依赖
 # macOS
 brew install oven-sh/bun/bun node ffmpeg      # Chrome 从官网装
 # Windows（装完新开一个终端，PATH 才生效）
@@ -49,13 +55,13 @@ winget install Oven-sh.Bun OpenJS.NodeJS.LTS Gyan.FFmpeg Google.Chrome
 Skill 合同的行为（真实发生过：Runtime 缺失时 Agent 手搓了一个"审片台"，产出与产品
 完全不兼容）。遇到这种情况，把 Agent 的报错原文发 Issue。
 
-当前发布 Plugin 是 `0.10.6`。内容提交 A 为
-`2dece38dc10a72c835ce7ccbec862d4e18851524`，带 provenance 的 Marketplace
-快照 B 为 `0e25fdbbb52c38b3080ea8a976b8949fde4b0d98`；Bootstrap manifest 永久固定
-到 B。干净环境直接使用 Codex Marketplace 安装：
+当前 `main` 候选 Plugin 是 `0.10.7`。内容提交 A 为
+`59f42c0901cbc85834a1617dc4a8c0e354f16298`，带 provenance 的 Marketplace
+快照 B 为 `5d299dc0eb07f02f085cbf6a63bf09b42638ed5e`；Bootstrap manifest 固定
+到 B。候选验证环境可使用 Codex Marketplace 安装：
 
 ```bash
-codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 0e25fdbbb52c38b3080ea8a976b8949fde4b0d98 && codex plugin marketplace upgrade chengfeng-videocut --json && codex plugin add chengfeng-videocut@chengfeng-videocut
+codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 5d299dc0eb07f02f085cbf6a63bf09b42638ed5e && codex plugin marketplace upgrade chengfeng-videocut --json && codex plugin add chengfeng-videocut@chengfeng-videocut
 ```
 
 三段必须分开是 Codex 官方 CLI 的机制：`marketplace add --ref <SHA>` 先挂市场，
@@ -65,7 +71,8 @@ codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 0e25
 
 Bootstrap 仍只调用官方 `plugin marketplace add --ref <40hex>`、`plugin marketplace upgrade` 与 `plugin add`，随后做只读回查；Marketplace upgrade 只 materialize manifest 固定的精确插件快照，不安装、升级、启动或修改 Product Runtime。由于 Codex 0.146 会在 Marketplace 缺失时从 `plugin list` 隐藏同市场孤儿插件，Bootstrap 会紧接 `marketplace add`、在 `marketplace upgrade` 之前执行 `plugin list --marketplace <name> --available --json`；只有目标条目明确为 `installed=false`、`enabled=false` 才继续。若此时发现已安装或已启用的既有插件，只撤回本次新增的 Marketplace，明确保留孤儿插件状态并拒绝继续，避免 upgrade 先覆盖其 cache。其他失败若发生在插件激活已经开始之后，则先执行官方 `plugin remove`，再移除本次 `alreadyAdded=false` 的目标市场，并通过 `marketplace list` 与 `plugin list` 双重回查确认本次新增状态已消失；它不碰安装前已存在的 Marketplace 或插件，主错误与回滚结果会同时报告。Bootstrap 不复制 Skill 文件。manifest 固定不可变快照 B，B 内的 provenance 再绑定内容提交 A 与完整 bundle 摘要。npm 的 GitHub git-spec 在已验证环境中不能稳定启动，因此不把 `npx github:...` 作为对外稳定安装承诺。
 
-上面的三段命令只用于干净安装。已经安装 0.10.5 的用户应让 Codex 执行“检查更新”，
+上面的三段命令只用于候选验证和干净安装；`stable` 在公开 Runtime 与双平台验证通过前
+保持原版本。已经安装 0.10.5 / 0.10.6 的测试用户应让 Codex 执行“检查更新”，
 核对 version + B + A + SHA-256 后确认激活，并在成功后新开任务；若 Windows 报 cache
 被占用，先完整退出旧 Codex Desktop/任务再重试，不要手工删除 cache。
 
@@ -84,7 +91,7 @@ codex plugin list --json
 ```text
 doctor
   |
-  +-- ready --------------------> 继续当前 Skill
+  +-- desktop-managed / ready --> 复用桌面安装与同一个用户服务
   |
   +-- missing
   |      |
@@ -103,7 +110,7 @@ Runtime 默认安装到：
 ~/.chengfeng-videocut
 ```
 
-Plugin 0.10.6 的产品合同固定为 `v0.4.7` Release、Runtime 0.4.7+ EDL 与跨平台用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。首次安装会从这个精确 Release 下载 `install.cjs` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退旧版。
+Plugin 0.10.7 的产品合同固定为 `v0.4.7` Release、Runtime 0.4.7+ EDL 与跨平台用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。桌面路径优先识别受管安装；纯 CLI 首次安装会从这个精确 Release 下载 `install.cjs` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退旧版。
 
 每个业务流程在第一次产品 API 前、每次人工审核恢复前都会执行共享 `ensure-running`：
 
@@ -171,8 +178,9 @@ Codex
   v
 shared ensure-runtime
   |
-  v
-GitHub Release Runtime
+  +-- Desktop managed root -> bundled Runtime / Bun / FFmpeg / FFprobe
+  |
+  +-- GitHub Release Runtime (CLI path)
   |
   +-- service ensure -> macOS LaunchAgent / Windows 计划任务
   +-- CLI / API
@@ -212,7 +220,7 @@ chengfeng-videocut-skills/
 
 ## 发布边界
 
-Plugin 0.10.6 依赖 Runtime 0.4.7 的 Windows 安装、用户服务与当前 EDL / Studio 合同。稳定发布顺序是：
+Plugin 0.10.7 依赖 Runtime 0.4.7 的 Windows 安装、用户服务与当前 EDL / Studio 合同。稳定发布顺序是：
 
 ```text
 Runtime v0.4.7 Release
