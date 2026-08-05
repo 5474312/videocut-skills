@@ -17,10 +17,35 @@ const visualContract = fs.readFileSync(
   "utf8",
 );
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "videocut-ensure-running-test-"));
+const expectedRuntimeMode = process.platform === "win32" ? "windows-task" : "launchd";
 
 function writeExecutable(file, body) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, body, { mode: 0o755 });
+}
+
+function writeNodeExecutable(file, body) {
+  if (process.platform === "win32") {
+    const driver = `${file}.cjs`;
+    const wrapper = `${file}.cmd`;
+    writeExecutable(driver, body);
+    writeExecutable(
+      wrapper,
+      `@echo off\r\n"${process.execPath}" "%~dp0${path.basename(driver)}" %*\r\n`,
+    );
+    return wrapper;
+  }
+  writeExecutable(file, `#!${process.execPath}\n${body}`);
+  return file;
+}
+
+function fakeRuntime(file, stdout, exitCode = 0, argsFile = null) {
+  return writeNodeExecutable(file, `"use strict";
+const fs = require("node:fs");
+${argsFile ? `fs.writeFileSync(${JSON.stringify(argsFile)}, \`\${process.argv.slice(2).join(" ")}\\n\`);` : ""}
+process.stdout.write(${JSON.stringify(`${stdout}\n`)});
+process.exit(${exitCode});
+`);
 }
 
 function run(binary) {
@@ -37,43 +62,46 @@ function run(binary) {
 
 try {
   const argsFile = path.join(tmp, "args.txt");
-  const readyBin = path.join(tmp, "ready", "chengfeng-videocut");
-  writeExecutable(readyBin, `#!/bin/sh
-printf '%s\n' "$*" > "${argsFile}"
-printf '%s\n' '{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"launchd","productVersion":"0.4.6","studioBuildId":"build-123","pid":1234,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"0.4.6","pid":1234,"runtimeMode":"launchd","studioBuildId":"build-123"}}}'
-`);
+  const readyBin = fakeRuntime(
+    path.join(tmp, "ready", "chengfeng-videocut"),
+    `{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"${expectedRuntimeMode}","productVersion":"0.4.7","studioBuildId":"build-123","pid":1234,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"0.4.7","pid":1234,"runtimeMode":"${expectedRuntimeMode}","studioBuildId":"build-123"}}}`,
+    0,
+    argsFile,
+  );
   const ready = run(readyBin);
   assert.equal(ready.status, 0, ready.stderr);
   assert.equal(JSON.parse(ready.stdout).data.healthy, true);
   assert.equal(fs.readFileSync(argsFile, "utf8").trim(), "service ensure --json");
 
-  const foregroundBin = path.join(tmp, "foreground", "chengfeng-videocut");
-  writeExecutable(foregroundBin, `#!/bin/sh
-printf '%s\n' '{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"foreground","productVersion":"0.4.6","studioBuildId":"build-4321","pid":4321,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"0.4.6","pid":4321,"runtimeMode":"foreground","studioBuildId":"build-4321"}}}'
-`);
+  const foregroundBin = fakeRuntime(
+    path.join(tmp, "foreground", "chengfeng-videocut"),
+    '{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"foreground","productVersion":"0.4.7","studioBuildId":"build-4321","pid":4321,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"0.4.7","pid":4321,"runtimeMode":"foreground","studioBuildId":"build-4321"}}}',
+  );
   const foreground = run(foregroundBin);
   assert.equal(foreground.status, 21);
   assert.equal(JSON.parse(foreground.stdout).error.code, "service_identity_mismatch");
 
-  const conflictBin = path.join(tmp, "conflict", "chengfeng-videocut");
-  writeExecutable(conflictBin, `#!/bin/sh
-printf '%s\n' '{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":false,"error":{"code":"service_port_conflict","message":"port conflict"}}'
-exit 6
-`);
+  const conflictBin = fakeRuntime(
+    path.join(tmp, "conflict", "chengfeng-videocut"),
+    '{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":false,"error":{"code":"service_port_conflict","message":"port conflict"}}',
+    6,
+  );
   const conflict = run(conflictBin);
   assert.equal(conflict.status, 6);
   assert.equal(JSON.parse(conflict.stdout).error.code, "service_port_conflict");
 
-  const forgedBin = path.join(tmp, "forged", "chengfeng-videocut");
-  writeExecutable(forgedBin, `#!/bin/sh
-printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"launchd","productVersion":"0.4.6","studioBuildId":"build-123","pid":1234,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"0.4.6","pid":1234,"runtimeMode":"launchd","studioBuildId":"build-123"}}}'
-`);
+  const forgedBin = fakeRuntime(
+    path.join(tmp, "forged", "chengfeng-videocut"),
+    `{"schemaVersion":1,"product":"another-product","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"${expectedRuntimeMode}","productVersion":"0.4.7","studioBuildId":"build-123","pid":1234,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"0.4.7","pid":1234,"runtimeMode":"${expectedRuntimeMode}","studioBuildId":"build-123"}}}`,
+  );
   const forged = run(forgedBin);
   assert.equal(forged.status, 21);
   assert.equal(JSON.parse(forged.stdout).error.code, "service_identity_mismatch");
 
-  const malformedBin = path.join(tmp, "malformed", "chengfeng-videocut");
-  writeExecutable(malformedBin, "#!/bin/sh\nprintf '%s\\n' 'not-json'\nexit 0\n");
+  const malformedBin = fakeRuntime(
+    path.join(tmp, "malformed", "chengfeng-videocut"),
+    "not-json",
+  );
   const malformed = run(malformedBin);
   assert.equal(malformed.status, 20);
   assert.equal(JSON.parse(malformed.stdout).error.code, "service_ensure_failed");
@@ -152,6 +180,24 @@ printf '%s\n' '{"schemaVersion":1,"product":"another-product","command":"service
   assert.match(visualContract, /color-scheme: dark/, "modules must declare the host color scheme");
   assert.match(visualContract, /drawSVG/, "the paid-plugin trap must stay documented");
   assert.doesNotMatch(visualSkill, /videocut-cli\.cjs" start|nohup|launchctl/);
+
+  for (const [name, skill] of [
+    ["cut", cutSkill],
+    ["subtitle", subtitleSkill],
+    ["visual", visualSkill],
+    ["export", exportSkill],
+  ]) {
+    assert.match(
+      skill,
+      /runtime\.kind=desktop-managed/,
+      `${name} must explicitly reuse the Desktop-managed Runtime`,
+    );
+    assert.match(
+      skill,
+      /scripts\/ensure-running\.cjs" --json/,
+      `${name} must enter through the shared managed service`,
+    );
+  }
 
   console.log(JSON.stringify({ ready: true, foregroundRejected: true, conflictForwarded: true, malformedFailedClosed: true, missing: true, skillOrdering: true }));
 } finally {

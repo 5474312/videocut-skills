@@ -31,11 +31,43 @@ function writeExecutable(file, body) {
   fs.writeFileSync(file, body, { mode: 0o755 });
 }
 
-function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.4.6") {
-  writeExecutable(file, `#!/bin/sh
-if [ "$1" = "--version" ]; then echo "chengfeng-videocut ${version}"; exit 0; fi
-if [ "$1" = "doctor" ]; then echo '${JSON.stringify({ schemaVersion: 1, product: "chengfeng-videocut", command: "doctor", ok: true, data: { healthy, ...(runtimeCapabilities ? { capabilities: runtimeCapabilities } : {}) } })}'; exit 0; fi
-exit 2
+function writeNodeExecutable(file, body) {
+  if (process.platform === "win32") {
+    const driver = `${file}.cjs`;
+    const wrapper = `${file}.cmd`;
+    writeExecutable(driver, body);
+    writeExecutable(
+      wrapper,
+      `@echo off\r\n"${process.execPath}" "%~dp0${path.basename(driver)}" %*\r\n`,
+    );
+    return wrapper;
+  }
+  writeExecutable(file, `#!${process.execPath}\n${body}`);
+  return file;
+}
+
+function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.4.7") {
+  const doctor = JSON.stringify({
+    schemaVersion: 1,
+    product: "chengfeng-videocut",
+    command: "doctor",
+    ok: true,
+    data: {
+      healthy,
+      ...(runtimeCapabilities ? { capabilities: runtimeCapabilities } : {}),
+    },
+  });
+  return writeNodeExecutable(file, `"use strict";
+const command = process.argv[2];
+if (command === "--version") {
+  process.stdout.write(${JSON.stringify(`chengfeng-videocut ${version}\n`)});
+  process.exit(0);
+}
+if (command === "doctor") {
+  process.stdout.write(${JSON.stringify(`${doctor}\n`)});
+  process.exit(0);
+}
+process.exit(2);
 `);
 }
 
@@ -69,38 +101,67 @@ try {
   assert.notEqual(pluginManifest.version, runtimeContract.releaseVersion, "Plugin package version is independent from Product Runtime release version");
   assert.equal(runtimeContract.minimumRuntimeVersion, runtimeContract.releaseVersion, "the independent Plugin still declares its minimum compatible Runtime");
 
-  const readyBin = path.join(tmp, "ready", "chengfeng-videocut");
-  fakeRuntime(readyBin, true);
+  const readyBin = fakeRuntime(path.join(tmp, "ready", "chengfeng-videocut"), true);
   const ready = run(["--json"], { CHENGFENG_VIDEOCUT_BIN: readyBin });
   assert.equal(ready.status, 0);
   assert.equal(JSON.parse(ready.stdout).runtime.state, "ready");
+
+  const desktopHome = path.join(tmp, "desktop-managed-home");
+  const desktopBin = fakeRuntime(
+    path.join(desktopHome, "bin", "chengfeng-videocut"),
+    true,
+  );
+  fs.mkdirSync(path.join(desktopHome, "app", "current"), { recursive: true });
+  fs.writeFileSync(path.join(desktopHome, "app", "current", "VERSION"), "0.4.7\n");
+  fs.writeFileSync(
+    path.join(desktopHome, "desktop-installation.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      product: "chengfeng-videocut",
+      source: "desktop",
+      productVersion: "0.4.7",
+    }),
+  );
+  const pathRuntimeDir = path.join(tmp, "path-runtime");
+  fakeRuntime(path.join(pathRuntimeDir, "chengfeng-videocut"), true, capabilities, "9.9.9");
+  const desktopManaged = run(["--json"], {
+    CHENGFENG_VIDEOCUT_BIN: "",
+    CHENGFENG_VIDEOCUT_HOME: desktopHome,
+    PATH: pathRuntimeDir,
+  });
+  assert.equal(desktopManaged.status, 0, desktopManaged.stderr);
+  const desktopPayload = JSON.parse(desktopManaged.stdout);
+  assert.equal(desktopPayload.runtime.kind, "desktop-managed");
+  assert.equal(desktopPayload.runtime.command, desktopBin);
+  assert.equal(desktopPayload.runtime.runtimeVersion, "0.4.7");
 
   const missing = run(["--json"], { CHENGFENG_VIDEOCUT_BIN: path.join(tmp, "missing") });
   assert.equal(missing.status, 10);
   assert.equal(JSON.parse(missing.stdout).error.code, "runtime_missing");
 
-  const unhealthyBin = path.join(tmp, "unhealthy", "chengfeng-videocut");
-  fakeRuntime(unhealthyBin, false);
+  const unhealthyBin = fakeRuntime(path.join(tmp, "unhealthy", "chengfeng-videocut"), false);
   const unhealthy = run(["--json"], { CHENGFENG_VIDEOCUT_BIN: unhealthyBin });
   assert.equal(unhealthy.status, 11);
   assert.equal(JSON.parse(unhealthy.stdout).error.code, "runtime_unhealthy");
 
-  const incompatibleBin = path.join(tmp, "incompatible", "chengfeng-videocut");
-  fakeRuntime(incompatibleBin, true, null);
+  const incompatibleBin = fakeRuntime(path.join(tmp, "incompatible", "chengfeng-videocut"), true, null);
   const incompatible = run(["--json"], { CHENGFENG_VIDEOCUT_BIN: incompatibleBin });
   assert.equal(incompatible.status, 14);
   assert.equal(JSON.parse(incompatible.stdout).error.code, "runtime_capability_missing");
 
-  const oldCapableBin = path.join(tmp, "old-capable", "chengfeng-videocut");
-  fakeRuntime(oldCapableBin, true, capabilities, "0.1.1");
+  const oldCapableBin = fakeRuntime(
+    path.join(tmp, "old-capable", "chengfeng-videocut"),
+    true,
+    capabilities,
+    "0.1.1",
+  );
   const oldCapable = run(["--json"], { CHENGFENG_VIDEOCUT_BIN: oldCapableBin });
   assert.equal(oldCapable.status, 14);
   const oldCapablePayload = JSON.parse(oldCapable.stdout);
   assert.equal(oldCapablePayload.error.code, "runtime_capability_missing");
   assert.equal(oldCapablePayload.error.details.compatibility.versionCompatible, false);
 
-  const foregroundOnlyBin = path.join(tmp, "foreground-only", "chengfeng-videocut");
-  fakeRuntime(foregroundOnlyBin, true, {
+  const foregroundOnlyBin = fakeRuntime(path.join(tmp, "foreground-only", "chengfeng-videocut"), true, {
     runtimeApiVersion: 1,
     editListSchemaVersion: 1,
     editListOperations: ["move", "trim", "split", "delete"],
@@ -122,23 +183,21 @@ try {
   assert.equal(fs.existsSync(mustNotRun), false, "an existing incompatible Runtime must never be overwritten");
 
   const installHome = path.join(tmp, "installed-home");
-  const releaseDirectory = path.join(tmp, "release-v0.4.6");
+  const releaseDirectory = path.join(tmp, "release-v0.4.7");
   const observedReleaseBase = path.join(tmp, "observed-release-base");
+  const releaseRuntimeDirectory = path.join(tmp, "release-runtime");
+  fakeRuntime(
+    path.join(releaseRuntimeDirectory, "chengfeng-videocut"),
+    true,
+    capabilities,
+    "0.4.7",
+  );
   writeRelease(releaseDirectory, `
 const nodeFs = require("node:fs");
 const nodePath = require("node:path");
 nodeFs.writeFileSync(${JSON.stringify(observedReleaseBase)}, process.env.CHENGFENG_VIDEOCUT_DOWNLOAD_BASE || "");
-const target = nodePath.join(process.env.CHENGFENG_VIDEOCUT_HOME, "bin", "chengfeng-videocut");
-nodeFs.mkdirSync(nodePath.dirname(target), { recursive: true });
-const doctorPayload = ${JSON.stringify(JSON.stringify({ schemaVersion: 1, product: "chengfeng-videocut", command: "doctor", ok: true, data: { healthy: true, capabilities } }))};
-const launcher = [
-  "#!/bin/sh",
-  'if [ "$1" = "--version" ]; then echo "chengfeng-videocut 0.4.6"; exit 0; fi',
-  \`if [ "$1" = "doctor" ]; then echo '\${doctorPayload}'; exit 0; fi\`,
-  "exit 2",
-  "",
-].join("\\n");
-nodeFs.writeFileSync(target, launcher, { mode: 0o755 });
+const target = nodePath.join(process.env.CHENGFENG_VIDEOCUT_HOME, "bin");
+nodeFs.cpSync(${JSON.stringify(releaseRuntimeDirectory)}, target, { recursive: true });
 `);
   const installed = run(["--install-if-missing", "--json"], {
     CHENGFENG_VIDEOCUT_BIN: "",
@@ -147,7 +206,7 @@ nodeFs.writeFileSync(target, launcher, { mode: 0o755 });
   });
   assert.equal(installed.status, 0, installed.stderr);
   assert.equal(JSON.parse(installed.stdout).installed, true);
-  assert.match(installed.stderr, /v0\.4\.6/);
+  assert.match(installed.stderr, /v0\.4\.7/);
   assert.equal(fs.readFileSync(observedReleaseBase, "utf8"), `file://${releaseDirectory}`);
 
   const unavailableHome = path.join(tmp, "unavailable-home");
@@ -170,7 +229,7 @@ nodeFs.writeFileSync(target, launcher, { mode: 0o755 });
   const checksumMarker = path.join(tmp, "checksum-installer-ran");
   writeRelease(
     badChecksumRelease,
-    `#!/bin/sh\ntouch "${checksumMarker}"\n`,
+    `require("node:fs").writeFileSync(${JSON.stringify(checksumMarker)}, "");\n`,
     "0".repeat(64),
   );
   const badChecksum = run(["--install-if-missing", "--json"], {
@@ -218,6 +277,7 @@ nodeFs.writeFileSync(target, launcher, { mode: 0o755 });
     unhealthy: 11,
     incompatible: 14,
     oldVersionRejected: true,
+    desktopManagedPreferredOverPath: true,
     foregroundOnlyRejected: true,
     incompatibleNotOverwritten: true,
     installedFromExactRelease: true,

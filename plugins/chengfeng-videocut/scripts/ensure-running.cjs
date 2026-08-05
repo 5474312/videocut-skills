@@ -134,7 +134,7 @@ function main(argv = process.argv.slice(2)) {
       ok: false,
       error: {
         code: "service_identity_mismatch",
-        message: "Studio 服务已响应，但 envelope、Service API、健康状态、launchd 身份、版本、PID、build 或 canonical URL 不满足 Plugin 合同。",
+        message: "Studio 服务已响应，但 envelope、Service API、健康状态、托管服务身份（launchd/windows-task）、版本、PID、build 或 canonical URL 不满足 Plugin 合同。",
         details: {
           requiredRuntimeMode: EXPECTED_RUNTIME_MODE,
           minimumRuntimeVersion: RUNTIME_CONTRACT.minimumRuntimeVersion,

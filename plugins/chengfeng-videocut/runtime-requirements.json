@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "product": "chengfeng-videocut",
   "repository": "Agentchengfeng/chengfeng-videocut",
-  "releaseTag": "v0.4.6",
-  "releaseVersion": "0.4.6",
-  "minimumRuntimeVersion": "0.4.6",
+  "releaseTag": "v0.4.7",
+  "releaseVersion": "0.4.7",
+  "minimumRuntimeVersion": "0.4.7",
   "installerAsset": "install.cjs",
   "checksumAsset": "SHA256SUMS.txt",
   "studioCapabilities": {
