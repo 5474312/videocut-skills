@@ -72,6 +72,9 @@ node "<插件根>/scripts/ensure-runtime.cjs" --install-if-missing --json
 ```
 
 - `ready` → **就绪**，业务 Skill 继续
+  - `runtime.kind=desktop-managed` 表示桌面 App 已把随包 Runtime、Bun、FFmpeg 和
+    FFprobe 安装到 Product 的统一受管目录；Skills 直接复用，不再另装依赖、另起服务
+  - `runtime.kind=managed/path/source` 仍是兼容的 CLI 安装来源；后续业务合同相同
 - missing：脚本只提示一次「正在从 GitHub Release 安装」，SHA-256 校验完成后自动续跑
 - `runtime_unhealthy`、安装失败或安装后 doctor 失败 → **停**，报告结构化诊断。
   **停止就是停止：禁止用自制的审核页、播放器、时间线或任何替代界面继续流程。**
@@ -85,17 +88,26 @@ node "<插件根>/scripts/ensure-runtime.cjs" --install-if-missing --json
 
 ### 机器前置依赖
 
-支持 **macOS** 与 **Windows 10/11**。缺任何一个依赖，安装会在对应环节明确停下
-（不静默跳过）：Bun ≥ 1.2、Node.js ≥ 20、ffmpeg ≥ 6、Google Chrome（导出用）。
+支持 **macOS** 与 **Windows 10/11**，分两条安装路径：
 
 ```text
-macOS     brew install bun ffmpeg          Chrome 从官网装
-Windows   winget install Oven-sh.Bun       winget install Gyan.FFmpeg
-          winget install OpenJS.NodeJS.LTS Google.Chrome
-          装完新开一个终端/会话，PATH 才生效
+桌面版（推荐）
+  安装并至少启动一次 Chengfeng VideoCut
+  -> App 随包安装 Bun、FFmpeg、FFprobe 和 Runtime
+  -> 不要求用户把这些工具加入系统 PATH
+  -> Skills 通过 ~/.chengfeng-videocut/bin 的稳定入口复用同一服务
+
+纯 CLI 安装
+  macOS     brew install bun ffmpeg
+  Windows   winget install Oven-sh.Bun Gyan.FFmpeg
+            装完新开一个终端/会话，PATH 才生效
 ```
 
-更新身份自证还需要 Git；Windows 可用 `winget install Git.Git`。Git 不可执行或
+两条路径都仍需要 Node.js ≥ 20 来执行 Plugin 脚本；导出字幕/动画仍需要 Google
+Chrome。纯 CLI 用户自行安装，Windows 可用
+`winget install OpenJS.NodeJS.LTS Google.Chrome`。缺项时必须明确停止，不静默跳过。
+
+Skills 更新身份自证还需要 Git；Windows 可用 `winget install Git.Git`。Git 不可执行或
 无法读取官方 snapshot 的 origin/HEAD/提交关系时，更新检查 fail-closed，但仍按上面
 规则继续 Runtime 检查。
 
@@ -211,7 +223,8 @@ node "<插件根>/scripts/videocut-cli.cjs" doctor --json
 
 报告：Runtime 版本与位置、doctor 每项检查结果、缺失项的修法（机器依赖指引安装；
 转录凭证指引 `node "<插件根>/scripts/videocut-cli.cjs" config set transcription.apiKey <key>`）。
-装好后告诉用户：直接说「剪口播」就能开始。
+若 `runtime.kind=desktop-managed`，明确说明 Bun/FFmpeg/FFprobe 来自桌面包且无需
+修改系统 PATH。装好后告诉用户：直接说「剪口播」就能开始。
 
 ## 边界
 
@@ -223,3 +236,5 @@ node "<插件根>/scripts/videocut-cli.cjs" doctor --json
   SHA-256 后才能开始可回滚激活
 - 不发布、不改项目数据或媒体；用户确认后的官方 Codex activation 与 Runtime
   安装是仅有的写入例外
+- 不搜索 Electron `.app`、NSIS 安装目录或把 Electron 资源路径交给业务 Skill；
+  桌面 App 负责写入稳定 Product 入口，Skills 只认该入口

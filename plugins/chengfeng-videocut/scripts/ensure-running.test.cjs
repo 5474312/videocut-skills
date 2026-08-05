@@ -181,6 +181,24 @@ try {
   assert.match(visualContract, /drawSVG/, "the paid-plugin trap must stay documented");
   assert.doesNotMatch(visualSkill, /videocut-cli\.cjs" start|nohup|launchctl/);
 
+  for (const [name, skill] of [
+    ["cut", cutSkill],
+    ["subtitle", subtitleSkill],
+    ["visual", visualSkill],
+    ["export", exportSkill],
+  ]) {
+    assert.match(
+      skill,
+      /runtime\.kind=desktop-managed/,
+      `${name} must explicitly reuse the Desktop-managed Runtime`,
+    );
+    assert.match(
+      skill,
+      /scripts\/ensure-running\.cjs" --json/,
+      `${name} must enter through the shared managed service`,
+    );
+  }
+
   console.log(JSON.stringify({ ready: true, foregroundRejected: true, conflictForwarded: true, malformedFailedClosed: true, missing: true, skillOrdering: true }));
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });

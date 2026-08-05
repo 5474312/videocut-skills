@@ -25,7 +25,7 @@ $chengfeng-videocut:chengfeng-check-updates
 
 静态元数据、`agents/openai.yaml`、Plugin 首页 starter prompt 和 CLI 的 `$plugin:skill` 调用，不能单独证明 Desktop Slash/Plugin 群组已经在界面中展示；那一项必须由实际 Desktop UI 单独验收。
 
-七个 raw Skill 都保留 `user-invocable: true`，以兼容已知 host 的手动选择 metadata；它不是群组显示、排序或可见性的公开保证。
+六个 raw Skill 都保留 `user-invocable: true`，以兼容已知 host 的手动选择 metadata；它不是群组显示、排序或可见性的公开保证。
 
 ## 能力边界
 
@@ -40,7 +40,14 @@ $chengfeng-videocut:chengfeng-check-updates
 
 共同边界只存在于 `references/runtime-and-product-contract.md` 与 `references/business-workflow-contract.md`。普通 reference 没有 `SKILL.md`、公开 ID 或 UI 卡片，不占用用户入口。
 
-业务 Skill 共用 `scripts/ensure-runtime.cjs`、`scripts/ensure-running.cjs` 和 `runtime-requirements.json`。Plugin package `0.10.6` 消费 Runtime compatibility contract `0.4.7`：只接受 Runtime 0.4.7+ 与声明的 EDL、常驻 service 能力；缺失时从精确的 `v0.4.7` Release 获取 `install.cjs` 和校验清单，校验后安装并执行 doctor。已有低版本 Runtime 只有在用户明确确认升级时才原子替换程序目录，项目数据不动。随后由 Product `service ensure --json` 幂等安装或恢复 macOS launchd / Windows Task Scheduler 用户服务；Plugin 不直接使用操作系统进程管理命令或 foreground 后台进程。Release 不存在、资产不完整或服务身份不匹配时安全停止。Studio 只在人工审核状态且通过 `ensure-studio.cjs` 顶层视图能力门禁后打开。
+业务 Skill 共用 `scripts/ensure-runtime.cjs`、`scripts/ensure-running.cjs` 和 `runtime-requirements.json`。Plugin package `0.10.7` 消费 Runtime compatibility contract `0.4.7`：只接受 Runtime 0.4.7+ 与声明的 EDL、常驻 service 能力；缺失时从精确的 `v0.4.7` Release 获取 `install.cjs` 和校验清单，校验后安装并执行 doctor。已有低版本 Runtime 只有在用户明确确认升级时才原子替换程序目录，项目数据不动。随后由 Product `service ensure --json` 幂等安装或恢复 macOS launchd / Windows Task Scheduler 用户服务；Plugin 不直接使用操作系统进程管理命令或 foreground 后台进程。Release 不存在、资产不完整或服务身份不匹配时安全停止。Studio 只在人工审核状态且通过 `ensure-studio.cjs` 顶层视图能力门禁后打开。
+
+桌面 App 与纯 CLI 不是两套 Runtime。App 首次启动把随包 Runtime、Bun、FFmpeg 和
+FFprobe 安装到 `~/.chengfeng-videocut` 的版本化目录，并由同一个稳定 launcher
+执行 `service ensure`；所有业务 Skill 只认这个稳定入口。桌面来源在只读检查中标为
+`desktop-managed`，不需要系统 PATH 里的 Bun/FFmpeg。Plugin 不搜索 Electron
+资源目录，也不接受 foreground 进程冒充正式服务。`chengfeng-report-bug` 即使看到
+桌面来源也仍保持只读。
 
 `chengfeng-report-bug` 不安装 Runtime、不启动 Studio，也不改项目。它只生成脱敏 Issue 草稿，用户确认同一份正文后才调用 GitHub CLI；没有明确 Issue URL 就不宣称上报成功。
 
@@ -90,7 +97,7 @@ Marketplace/Plugin 后，先以 manifest 的 exact 40-hex ref 执行 Marketplace
 Plugin add；后续失败则按本次实际创建的状态执行 Plugin remove → Marketplace
 remove，并再次复读确认。
 
-Plugin 是独立的 `0.10.6` 版本；`runtime-requirements.json` 要求 Product Runtime `0.4.7`。两者不能互相替代。
+Plugin 是独立的 `0.10.7` 版本；`runtime-requirements.json` 要求 Product Runtime `0.4.7`。两者不能互相替代。
 
 ## 开发验证
 

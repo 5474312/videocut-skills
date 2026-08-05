@@ -27,14 +27,19 @@ ensure-runtime
                                       停止，不回退旧剪辑链
 ```
 
-- Plugin package `0.10.6` 消费的机器可读 Runtime compatibility contract 是 `runtime-requirements.json`：`releaseTag=v0.4.7`、`releaseVersion=0.4.7`、最低 Runtime 为 `0.4.7`，并声明 Runtime EDL、Studio 与跨平台用户服务能力集合。
+- Plugin package `0.10.7` 消费的机器可读 Runtime compatibility contract 是 `runtime-requirements.json`：`releaseTag=v0.4.7`、`releaseVersion=0.4.7`、最低 Runtime 为 `0.4.7`，并声明 Runtime EDL、Studio 与跨平台用户服务能力集合。
 - 缺失时只从 `v0.4.7` 的精确 Release 下载 `install.cjs` 与 `SHA256SUMS.txt`；先校验安装器本身，再执行安装器。安装器收到同一个精确 Release 地址，不得访问 `latest`。
-- `v0.4.7` Release 尚不存在、缺少安装器、缺少安装器校验值或哈希不符时，以 `install_failed` 停止；不得转装公开旧版、源码 clone、npm、bunx 或 DMG。
+- 桌面安装是另一条受支持的 Product 分发入口：App 首启把随包 Runtime、Bun、
+  FFmpeg、FFprobe 写入相同受管根并执行同一个 `service ensure`。成功后只读探测
+  返回 `kind=desktop-managed`；业务合同、CLI/API 和服务身份不变。
+- `v0.4.7` Release 尚不存在、缺少安装器、缺少安装器校验值或哈希不符时，以 `install_failed` 停止；纯 CLI 路径不得转装公开旧版、源码 clone、npm 或 bunx。
 - 安装位置是 `CHENGFENG_VIDEOCUT_HOME` 或 `~/.chengfeng-videocut`。
 - CLI 已存在但 doctor 失败时不自动覆盖或循环重装；已有 Runtime 低于 0.4.7 时也不静默覆盖，只有用户明确确认 `--upgrade` 才原子替换程序目录。
 - CLI doctor 健康但版本低于 0.4.7，或缺少 EDL schema、expected revision、managed A-roll projection、move / trim / split / delete、service API、父进程独立存活或 crash restart capability 时，以 `runtime_capability_missing` 停止；不把“健康”误当“兼容”。
-- 查找顺序：显式 `CHENGFENG_VIDEOCUT_BIN`、PATH、托管安装目录、显式开发目录 `CHENGFENG_VIDEOCUT_DIR`。
-- 不使用 npm、bunx、DMG 或源码 clone 作为普通用户安装流程。
+- 查找顺序：显式 `CHENGFENG_VIDEOCUT_BIN`、托管安装目录、PATH、显式开发目录
+  `CHENGFENG_VIDEOCUT_DIR`。这确保桌面版稳定入口不会被 PATH 中的旧 CLI 遮蔽。
+- Plugin 不搜索 Electron `.app`、NSIS 目录或 resources；只有桌面 App 自己能把
+  随包资产安装成 Product 稳定入口。
 
 ## 常驻服务门禁
 
@@ -106,7 +111,7 @@ Product open 返回项目 URL
 ## 当前 Runtime 兼容门禁
 
 - 低于 0.4.7 的 Runtime 不具备本 Plugin 发布所绑定的完整 Windows 安装修复与当前 EDL / Studio compatibility contract，必须被版本门禁拒绝，直到用户明确确认升级。
-- Runtime `v0.4.7` Release 必须先于 Plugin package `0.10.6` 发布，并至少包含 `install.cjs`、版本化/稳定名 portable 与 tgz、覆盖所有正式附件的 `SHA256SUMS.txt`。
+- Runtime `v0.4.7` Release 必须先于 Plugin package `0.10.7` 发布，并至少包含 `install.cjs`、版本化/稳定名 portable 与 tgz、覆盖所有正式附件的 `SHA256SUMS.txt`。
 - `v0.4.7` 必须提供正式原视频云端转录命令；缺少时以 `missing_cloud_transcription_adapter` 停止，禁止回退本地 ASR。
 - `v0.4.7` 必须内置可用 renderer；新版 Skill 不得把旧 renderer 重新打包。
 - 没有 HyperFrames 顶层 `koubo` 视图或 capability manifest 的历史 Studio 必须被能力门禁拒绝，不能再作为审核界面回退。
@@ -260,7 +265,7 @@ Release assets + SHA256SUMS（含 install.cjs）
 隔离环境首次安装 + doctor + Studio capability 验收
       |
       v
-Plugin 0.10.6 内容提交
+Plugin 0.10.7 内容提交
       |
       +------------------------------> contentRevision A
       |
@@ -276,4 +281,4 @@ Plugin 0.10.6 内容提交
 用户确认后固定安装 --ref B
 ```
 
-Plugin package 0.10.6 可以先形成候选，但在 Product Runtime v0.4.7 Release 通过公开下载与 Windows 安装验收之前不得推进 `stable`；这段空窗期的预期行为是安全失败，而不是安装旧 Runtime。
+Plugin package 0.10.7 可以先形成候选，但在 Product Runtime v0.4.7 Release 与双平台桌面包通过公开下载、安装和 Skills 共用服务验收之前不得推进 `stable`；这段空窗期的预期行为是安全失败，而不是安装旧 Runtime。

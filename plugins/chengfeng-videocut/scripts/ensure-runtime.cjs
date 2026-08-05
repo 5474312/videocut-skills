@@ -166,6 +166,29 @@ function managedHome() {
   );
 }
 
+function managedRuntimeKind(root) {
+  try {
+    const receipt = JSON.parse(
+      readFileSync(path.join(root, "desktop-installation.json"), "utf8"),
+    );
+    const installedVersion = readFileSync(
+      path.join(root, "app", "current", "VERSION"),
+      "utf8",
+    ).trim();
+    if (
+      receipt?.schemaVersion === 1 &&
+      receipt?.product === PRODUCT &&
+      receipt?.source === "desktop" &&
+      receipt?.productVersion === installedVersion
+    ) {
+      return "desktop-managed";
+    }
+  } catch {
+    // A CLI-only installation has no Desktop receipt.
+  }
+  return "managed";
+}
+
 function sourceInvocation(args) {
   const directory = process.env.CHENGFENG_VIDEOCUT_DIR;
   if (!directory) return null;
@@ -188,18 +211,24 @@ function resolveRuntimeInvocation(args = []) {
       : null;
   }
 
-  const installed = findCommand(PRODUCT);
-  if (installed) return { command: installed, args, cwd: process.cwd(), kind: "path" };
-
+  const root = managedHome();
   const managedNames = process.platform === "win32"
     ? [`${PRODUCT}.cmd`, `${PRODUCT}.exe`, PRODUCT]
     : [PRODUCT];
   for (const name of managedNames) {
-    const managed = path.join(managedHome(), "bin", name);
+    const managed = path.join(root, "bin", name);
     if (isExecutable(managed)) {
-      return { command: managed, args, cwd: process.cwd(), kind: "managed" };
+      return {
+        command: managed,
+        args,
+        cwd: process.cwd(),
+        kind: managedRuntimeKind(root),
+      };
     }
   }
+
+  const installed = findCommand(PRODUCT);
+  if (installed) return { command: installed, args, cwd: process.cwd(), kind: "path" };
 
   return sourceInvocation(args);
 }
@@ -471,6 +500,7 @@ module.exports = {
   inspectRuntime,
   main,
   managedHome,
+  managedRuntimeKind,
   parseSemver,
   resolveRuntimeInvocation,
   supportsRequiredCapabilities,

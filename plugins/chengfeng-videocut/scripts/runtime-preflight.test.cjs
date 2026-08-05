@@ -106,6 +106,35 @@ try {
   assert.equal(ready.status, 0);
   assert.equal(JSON.parse(ready.stdout).runtime.state, "ready");
 
+  const desktopHome = path.join(tmp, "desktop-managed-home");
+  const desktopBin = fakeRuntime(
+    path.join(desktopHome, "bin", "chengfeng-videocut"),
+    true,
+  );
+  fs.mkdirSync(path.join(desktopHome, "app", "current"), { recursive: true });
+  fs.writeFileSync(path.join(desktopHome, "app", "current", "VERSION"), "0.4.7\n");
+  fs.writeFileSync(
+    path.join(desktopHome, "desktop-installation.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      product: "chengfeng-videocut",
+      source: "desktop",
+      productVersion: "0.4.7",
+    }),
+  );
+  const pathRuntimeDir = path.join(tmp, "path-runtime");
+  fakeRuntime(path.join(pathRuntimeDir, "chengfeng-videocut"), true, capabilities, "9.9.9");
+  const desktopManaged = run(["--json"], {
+    CHENGFENG_VIDEOCUT_BIN: "",
+    CHENGFENG_VIDEOCUT_HOME: desktopHome,
+    PATH: pathRuntimeDir,
+  });
+  assert.equal(desktopManaged.status, 0, desktopManaged.stderr);
+  const desktopPayload = JSON.parse(desktopManaged.stdout);
+  assert.equal(desktopPayload.runtime.kind, "desktop-managed");
+  assert.equal(desktopPayload.runtime.command, desktopBin);
+  assert.equal(desktopPayload.runtime.runtimeVersion, "0.4.7");
+
   const missing = run(["--json"], { CHENGFENG_VIDEOCUT_BIN: path.join(tmp, "missing") });
   assert.equal(missing.status, 10);
   assert.equal(JSON.parse(missing.stdout).error.code, "runtime_missing");
@@ -248,6 +277,7 @@ nodeFs.cpSync(${JSON.stringify(releaseRuntimeDirectory)}, target, { recursive: t
     unhealthy: 11,
     incompatible: 14,
     oldVersionRejected: true,
+    desktopManagedPreferredOverPath: true,
     foregroundOnlyRejected: true,
     incompatibleNotOverwritten: true,
     installedFromExactRelease: true,
