@@ -98,7 +98,10 @@ const candidateDigest = sealBundle(candidateTemplate, pluginVersion);
 makeBundle(oldTemplate, oldVersion, "legacy-installed");
 const oldDigest = inventoryDigest(oldTemplate);
 const higherTemplate = path.join(temporaryRoot, "higher-template");
-const higherVersion = "0.10.7";
+const higherVersion = pluginVersion.replace(
+  /(\d+)$/,
+  (_, patch) => String(Number(patch) + 1),
+);
 makeBundle(higherTemplate, higherVersion, "higher-installed");
 sealBundle(higherTemplate, higherVersion);
 const equivalentTemplate = path.join(
