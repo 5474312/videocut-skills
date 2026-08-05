@@ -2,21 +2,24 @@
 
 给 Codex 用的中文口播剪辑 Marketplace 插件。
 
-Plugin 根入口、两个业务入口和两个支持入口组成；共同规则是内部 reference，不占用户 Skill：
+Plugin 根入口、四个业务入口和两个支持入口组成；共同规则是内部 reference，不占用户 Skill：
 
 ```text
 Plugin 根名  -> 安装与 UI 群组名，不是同名 Skill
-剪口播      -> source_cut.mp4 + subtitles.srt
+剪口播      -> 已复核的删词账本
+字幕        -> subtitles.json
+画面        -> visuals.json + HTML 模块
+导出        -> 成片.mp4
 上报 Bug    -> 脱敏草稿 -> 用户确认 -> GitHub Issue URL
 检查更新    -> Marketplace 快照 -> 来源证明 -> 用户确认 -> 复读版本
 共同规则    -> references/，不注册为 Skill
 ```
 
-插件不复制剪辑产品本体。两个业务 Skill 负责判断和编排，确定性动作由 `chengfeng-videocut` Runtime 的 CLI / API 执行；只有进入人工审核阶段且 Studio 能力匹配时才打开界面。Bug 支持 Skill 不安装 Runtime、不启动 Studio，也不改项目。
+插件不复制剪辑产品本体。四个业务 Skill 负责判断和编排，确定性动作由 `chengfeng-videocut` Runtime 的 CLI / API 执行；只有进入人工审核阶段且 Studio 能力匹配时才打开界面。Bug 支持 Skill 不安装 Runtime、不启动 Studio，也不改项目。
 
 ## 安装
 
-一行命令装插件（挂市场 + 安装，`&&` 串联，第一步成功才执行第二步）。
+一行命令装插件（挂市场 + materialize 精确快照 + 安装，`&&` 串联，前一步成功才继续）。
 播放器 / Studio 不需要单独装：第一次让 Agent 真正干活（剪口播、导出等）时，
 「检查更新」的就绪检查会自动从固定版本的 GitHub Release 下载、SHA-256 校验并安装，
 只是那一次任务要先等几分钟安装。
@@ -31,7 +34,7 @@ Windows 支持自 Runtime v0.4.2 起正式可用（真机验收：安装、常�
 | 依赖 | 用途 | 要求 |
 | --- | --- | --- |
 | Bun | 运行产品 Runtime | ≥ 1.2 |
-| Node.js | Skill 就绪检查脚本 | 近代版本即可 |
+| Node.js | Skill 脚本、MCP Server 与 Runtime 安装器 | ≥ 20 |
 | ffmpeg | 剪辑与导出 | ≥ 6（含 ffprobe） |
 | Google Chrome | 导出成片时渲染字幕和动画 | 桌面版 |
 
@@ -46,17 +49,25 @@ winget install Oven-sh.Bun OpenJS.NodeJS.LTS Gyan.FFmpeg Google.Chrome
 Skill 合同的行为（真实发生过：Runtime 缺失时 Agent 手搓了一个"审片台"，产出与产品
 完全不兼容）。遇到这种情况，把 Agent 的报错原文发 Issue。
 
-当前公开 Plugin P 是 `0.10.5`；发布后将由 Bootstrap manifest 固定其不可变 40-hex commit。直接使用 Codex Marketplace 安装：
+当前发布 Plugin 是 `0.10.6`。内容提交 A 为
+`2dece38dc10a72c835ce7ccbec862d4e18851524`，带 provenance 的 Marketplace
+快照 B 为 `0e25fdbbb52c38b3080ea8a976b8949fde4b0d98`；Bootstrap manifest 永久固定
+到 B。干净环境直接使用 Codex Marketplace 安装：
 
 ```bash
-codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref edb0ee81d4bb7016e20d7fbbba14035c7caffbe3 && codex plugin add chengfeng-videocut@chengfeng-videocut
+codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 0e25fdbbb52c38b3080ea8a976b8949fde4b0d98 && codex plugin marketplace upgrade chengfeng-videocut --json && codex plugin add chengfeng-videocut@chengfeng-videocut
 ```
 
-两段必须分开是 Codex 官方 CLI 的机制：市场与插件是两层（一个市场可挂多个插件），
-`plugin add` 只能从已挂市场的快照安装，没有「直接从 Git 一步装」的形式。
+三段必须分开是 Codex 官方 CLI 的机制：`marketplace add --ref <SHA>` 先挂市场，
+`marketplace upgrade` materialize 该精确快照及安装 metadata，`plugin add` 再从
+已验证的市场快照安装；没有「直接从 Git 一步装」的形式。
 想装完立即拿到播放器（不等首次任务），装完插件后对 Codex 说「**安装剪辑环境**」即可。
 
-Bootstrap 仍只调用官方 `plugin marketplace add --ref <40hex>` 与 `plugin add`，随后做只读回查；它不复制 Skill 文件，也不会安装、升级、启动或修改 Product Runtime。每个 Bootstrap B 都在 manifest 中固定不可变 Plugin commit P。npm 的 GitHub git-spec 在已验证环境中不能稳定启动，因此不把 `npx github:...` 作为对外稳定安装承诺。
+Bootstrap 仍只调用官方 `plugin marketplace add --ref <40hex>`、`plugin marketplace upgrade` 与 `plugin add`，随后做只读回查；Marketplace upgrade 只 materialize manifest 固定的精确插件快照，不安装、升级、启动或修改 Product Runtime。由于 Codex 0.146 会在 Marketplace 缺失时从 `plugin list` 隐藏同市场孤儿插件，Bootstrap 会紧接 `marketplace add`、在 `marketplace upgrade` 之前执行 `plugin list --marketplace <name> --available --json`；只有目标条目明确为 `installed=false`、`enabled=false` 才继续。若此时发现已安装或已启用的既有插件，只撤回本次新增的 Marketplace，明确保留孤儿插件状态并拒绝继续，避免 upgrade 先覆盖其 cache。其他失败若发生在插件激活已经开始之后，则先执行官方 `plugin remove`，再移除本次 `alreadyAdded=false` 的目标市场，并通过 `marketplace list` 与 `plugin list` 双重回查确认本次新增状态已消失；它不碰安装前已存在的 Marketplace 或插件，主错误与回滚结果会同时报告。Bootstrap 不复制 Skill 文件。manifest 固定不可变快照 B，B 内的 provenance 再绑定内容提交 A 与完整 bundle 摘要。npm 的 GitHub git-spec 在已验证环境中不能稳定启动，因此不把 `npx github:...` 作为对外稳定安装承诺。
+
+上面的三段命令只用于干净安装。已经安装 0.10.5 的用户应让 Codex 执行“检查更新”，
+核对 version + B + A + SHA-256 后确认激活，并在成功后新开任务；若 Windows 报 cache
+被占用，先完整退出旧 Codex Desktop/任务再重试，不要手工删除 cache。
 
 装完插件后也可以直接对 Codex 说「**安装剪辑环境**」——「检查更新」Skill 的环境入口会
 下载校验 Runtime、跑 doctor 自检并报告缺什么，不必先发起剪辑任务。
@@ -92,12 +103,12 @@ Runtime 默认安装到：
 ~/.chengfeng-videocut
 ```
 
-Plugin 0.10.5 的产品合同固定为 `v0.4.6` Release、Runtime 0.4.6+ EDL 与用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。首次安装会从这个精确 Release 下载 `install.sh` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退 v0.1.1。
+Plugin 0.10.6 的产品合同固定为 `v0.4.7` Release、Runtime 0.4.7+ EDL 与跨平台用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。首次安装会从这个精确 Release 下载 `install.cjs` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退旧版。
 
 每个业务流程在第一次产品 API 前、每次人工审核恢复前都会执行共享 `ensure-running`：
 
 ```text
-Skill -> Product service ensure -> launchd service ready -> 继续当前流程
+Skill -> Product service ensure -> managed user service ready -> 继续当前流程
                            |
                            +-> identity / port conflict -> 停止，不回退 foreground
 ```
@@ -149,6 +160,9 @@ Codex
   |
   +-- Plugin: chengfeng-videocut（根名称）
   +-- chengfeng-cut
+  +-- chengfeng-subtitle
+  +-- chengfeng-visual
+  +-- chengfeng-export
   +-- chengfeng-report-bug (支持入口)
   +-- chengfeng-check-updates (支持入口)
   +-- references/ (内部合同，不是 Skill)
@@ -184,6 +198,9 @@ chengfeng-videocut-skills/
 │   ├── references/
 │   └── skills/
 │       ├── chengfeng-cut/
+│       ├── chengfeng-subtitle/
+│       ├── chengfeng-visual/
+│       ├── chengfeng-export/
 │       ├── chengfeng-report-bug/
 │       └── chengfeng-check-updates/
 ├── LICENSE
@@ -195,16 +212,19 @@ chengfeng-videocut-skills/
 
 ## 发布边界
 
-公开 Runtime v0.1.1 不满足 Plugin 0.5.1 的合同，不能再作为自动安装目标。稳定发布顺序必须是：
+Plugin 0.10.6 依赖 Runtime 0.4.7 的 Windows 安装、用户服务与当前 EDL / Studio 合同。稳定发布顺序是：
 
 ```text
-Runtime v0.2.0 Release
-  -> install.sh 与产品包进入 SHA256SUMS
-  -> 隔离环境首次安装 / doctor / Studio capability / 两条工作流 E2E
-  -> Plugin 0.5.1 Marketplace 发布
+Runtime v0.4.7 Release
+  -> install.sh、install.cjs 与全部产品包进入 SHA256SUMS
+  -> 从公开附件在 Windows / macOS 隔离环境安装并执行 doctor
+  -> Plugin 内容提交 A
+  -> 只增加 provenance 的 Marketplace 快照 B
+  -> stable 指向 B，Bootstrap manifest 固定 B
+  -> 从公开入口验证干净安装与 0.10.5 更新
 ```
 
-在 Runtime v0.2.0 补齐云端 transcribe/import、内置 renderer 并完成真实项目 E2E 前，不把“两条工作流已经完全自动化”作为公开承诺。
+任何一步未通过都停止推进下一项；本地候选测试不能代替公开资产下载后的复验。
 
 ## 开发验证
 
@@ -215,7 +235,7 @@ npm run build
 npm test
 ```
 
-另外运行 Plugin validator、前端 YAML/公开 ID 契约测试，并在隔离 Codex 上下文中确认两个业务 Skill 和两个支持 Skill，且不存在已退休的 basics。静态文件存在不等于斜杠/技能选择器已经显示，后者必须单独实测。
+另外运行 Plugin validator、前端 YAML/公开 ID 契约测试，并在隔离 Codex 上下文中确认四个业务 Skill 和两个支持 Skill，且不存在已退休的 basics。静态文件存在不等于斜杠/技能选择器已经显示，后者必须单独实测。
 
 ## 官方来源
 
