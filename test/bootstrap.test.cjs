@@ -10,6 +10,9 @@ const test = require('node:test');
 const ROOT = path.resolve(__dirname, '..');
 const SOURCE = 'Agentchengfeng/chengfeng-videocut-skills';
 const ORIGIN = `https://github.com/${SOURCE}.git`;
+const RELEASE_PLUGIN_VERSION = '0.10.8';
+const RELEASE_CONTENT_REF = 'a513462f65b6f50083a20ac8da6ec3c32d2ddcde';
+const RELEASE_SNAPSHOT_REF = '1487e02b1c0c39ea74d079e8ce45da56bf59bc32';
 
 function run(command, args, options = {}) {
   const batch = process.platform === 'win32' && /^(npm|npx|pnpm|yarn)$/i.test(command)
@@ -28,6 +31,46 @@ function run(command, args, options = {}) {
   assert.equal(result.status, 0, `${command} ${args.join(' ')}\n${result.stderr}`);
   return result.stdout;
 }
+
+function gitAtRoot(args) {
+  return run('git', ['-C', ROOT, ...args]);
+}
+
+test('checked-in bootstrap pin binds the 0.10.8 content/provenance snapshot and leaves its plugin subtree unchanged', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'installer-manifest.json'), 'utf8'));
+  assert.equal(manifest.pluginRef, RELEASE_SNAPSHOT_REF);
+  assert.equal(manifest.marketplaceRef, RELEASE_SNAPSHOT_REF);
+
+  const pluginManifest = JSON.parse(gitAtRoot([
+    'show',
+    `${RELEASE_SNAPSHOT_REF}:plugins/chengfeng-videocut/.codex-plugin/plugin.json`
+  ]));
+  const provenance = JSON.parse(gitAtRoot([
+    'show',
+    `${RELEASE_SNAPSHOT_REF}:plugins/chengfeng-videocut/.codex-plugin/update-provenance.json`
+  ]));
+  assert.equal(pluginManifest.version, RELEASE_PLUGIN_VERSION);
+  assert.equal(provenance.version, RELEASE_PLUGIN_VERSION);
+  assert.equal(provenance.immutableRef, RELEASE_CONTENT_REF);
+  gitAtRoot(['merge-base', '--is-ancestor', RELEASE_CONTENT_REF, RELEASE_SNAPSHOT_REF]);
+
+  const pluginChangesAfterSnapshot = gitAtRoot([
+    'diff',
+    '--name-only',
+    RELEASE_SNAPSHOT_REF,
+    'HEAD',
+    '--',
+    'plugins/chengfeng-videocut'
+  ]).trim();
+  assert.equal(pluginChangesAfterSnapshot, '', 'Bootstrap C must not alter the released plugin subtree.');
+
+  const readme = fs.readFileSync(path.join(ROOT, 'README.md'), 'utf8');
+  assert.match(readme, new RegExp('本次待发布 Plugin 是 `' + RELEASE_PLUGIN_VERSION + '`'));
+  assert.match(readme, new RegExp('`' + RELEASE_CONTENT_REF + '`'));
+  assert.match(readme, new RegExp('`' + RELEASE_SNAPSHOT_REF + '`'));
+  assert.match(readme, /stable 指向 B，main 指向 C，Bootstrap manifest 固定 B/);
+  assert.doesNotMatch(readme, /当前 `main` 候选 Plugin 是 `0\.10\.7`/);
+});
 
 function createClone(dir, { origin = ORIGIN, metadata = {} } = {}) {
   const clone = path.join(dir, 'codex-home', '.tmp', 'marketplaces', 'chengfeng-videocut');

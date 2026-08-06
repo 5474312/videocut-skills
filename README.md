@@ -55,13 +55,13 @@ winget install Oven-sh.Bun OpenJS.NodeJS.LTS Gyan.FFmpeg Google.Chrome
 Skill 合同的行为（真实发生过：Runtime 缺失时 Agent 手搓了一个"审片台"，产出与产品
 完全不兼容）。遇到这种情况，把 Agent 的报错原文发 Issue。
 
-当前 `main` 候选 Plugin 是 `0.10.7`。内容提交 A 为
-`59f42c0901cbc85834a1617dc4a8c0e354f16298`，带 provenance 的 Marketplace
-快照 B 为 `5d299dc0eb07f02f085cbf6a63bf09b42638ed5e`；Bootstrap manifest 固定
+本次待发布 Plugin 是 `0.10.8`。内容提交 A 为
+`a513462f65b6f50083a20ac8da6ec3c32d2ddcde`，带 provenance 的 Marketplace
+快照 B 为 `1487e02b1c0c39ea74d079e8ce45da56bf59bc32`；Bootstrap manifest 永久固定
 到 B。候选验证环境可使用 Codex Marketplace 安装：
 
 ```bash
-codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 5d299dc0eb07f02f085cbf6a63bf09b42638ed5e && codex plugin marketplace upgrade chengfeng-videocut --json && codex plugin add chengfeng-videocut@chengfeng-videocut
+codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 1487e02b1c0c39ea74d079e8ce45da56bf59bc32 && codex plugin marketplace upgrade chengfeng-videocut --json && codex plugin add chengfeng-videocut@chengfeng-videocut
 ```
 
 三段必须分开是 Codex 官方 CLI 的机制：`marketplace add --ref <SHA>` 先挂市场，
@@ -71,8 +71,11 @@ codex plugin marketplace add Agentchengfeng/chengfeng-videocut-skills --ref 5d29
 
 Bootstrap 仍只调用官方 `plugin marketplace add --ref <40hex>`、`plugin marketplace upgrade` 与 `plugin add`，随后做只读回查；Marketplace upgrade 只 materialize manifest 固定的精确插件快照，不安装、升级、启动或修改 Product Runtime。由于 Codex 0.146 会在 Marketplace 缺失时从 `plugin list` 隐藏同市场孤儿插件，Bootstrap 会紧接 `marketplace add`、在 `marketplace upgrade` 之前执行 `plugin list --marketplace <name> --available --json`；只有目标条目明确为 `installed=false`、`enabled=false` 才继续。若此时发现已安装或已启用的既有插件，只撤回本次新增的 Marketplace，明确保留孤儿插件状态并拒绝继续，避免 upgrade 先覆盖其 cache。其他失败若发生在插件激活已经开始之后，则先执行官方 `plugin remove`，再移除本次 `alreadyAdded=false` 的目标市场，并通过 `marketplace list` 与 `plugin list` 双重回查确认本次新增状态已消失；它不碰安装前已存在的 Marketplace 或插件，主错误与回滚结果会同时报告。Bootstrap 不复制 Skill 文件。manifest 固定不可变快照 B，B 内的 provenance 再绑定内容提交 A 与完整 bundle 摘要。npm 的 GitHub git-spec 在已验证环境中不能稳定启动，因此不把 `npx github:...` 作为对外稳定安装承诺。
 
-上面的三段命令只用于候选验证和干净安装；`stable` 在公开 Runtime 与双平台验证通过前
-保持原版本。已经安装 0.10.5 / 0.10.6 的测试用户应让 Codex 执行“检查更新”，
+发布完成后的远端分层为：`stable` 指向 B，仅供更新检查在隔离 `CODEX_HOME` 中发现
+候选；用户 Marketplace 和 Bootstrap 都必须固定 B，不能跟踪 `stable`。`main` 指向只改
+根 Bootstrap manifest 与 README 的提交 C，Plugin 子树与 B 完全相同。公开 Runtime
+与双平台验收完成前，不得移动 `stable` 或把本候选表述为可下载版本。已经安装 0.10.5 /
+0.10.6 的测试用户应让 Codex 执行“检查更新”，
 核对 version + B + A + SHA-256 后确认激活，并在成功后新开任务；若 Windows 报 cache
 被占用，先完整退出旧 Codex Desktop/任务再重试，不要手工删除 cache。
 
@@ -229,7 +232,8 @@ Runtime v0.4.8 Release
   -> 从公开附件在 Windows / macOS 隔离环境安装并执行 doctor
   -> Plugin 内容提交 A
   -> 只增加 provenance 的 Marketplace 快照 B
-  -> stable 指向 B，Bootstrap manifest 固定 B
+  -> 根 Bootstrap 提交 C（只改 manifest / README，Plugin 子树仍等于 B）
+  -> stable 指向 B，main 指向 C，Bootstrap manifest 固定 B
   -> 从公开入口验证干净安装与 0.10.5 更新
 ```
 
