@@ -8,6 +8,7 @@ const { spawnSync } = require("node:child_process");
 
 const root = path.resolve(__dirname, "..");
 const ensureRunning = path.join(root, "scripts", "ensure-running.cjs");
+const runtimeContract = JSON.parse(fs.readFileSync(path.join(root, "runtime-requirements.json"), "utf8"));
 const cutSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-cut", "SKILL.md"), "utf8");
 const exportSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-export", "SKILL.md"), "utf8");
 const subtitleSkill = fs.readFileSync(path.join(root, "skills", "chengfeng-subtitle", "SKILL.md"), "utf8");
@@ -64,7 +65,7 @@ try {
   const argsFile = path.join(tmp, "args.txt");
   const readyBin = fakeRuntime(
     path.join(tmp, "ready", "chengfeng-videocut"),
-    `{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"${expectedRuntimeMode}","productVersion":"0.4.7","studioBuildId":"build-123","pid":1234,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"0.4.7","pid":1234,"runtimeMode":"${expectedRuntimeMode}","studioBuildId":"build-123"}}}`,
+    `{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"${expectedRuntimeMode}","productVersion":"${runtimeContract.minimumRuntimeVersion}","studioBuildId":"build-123","pid":1234,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"${runtimeContract.minimumRuntimeVersion}","pid":1234,"runtimeMode":"${expectedRuntimeMode}","studioBuildId":"build-123"}}}`,
     0,
     argsFile,
   );
@@ -75,7 +76,7 @@ try {
 
   const foregroundBin = fakeRuntime(
     path.join(tmp, "foreground", "chengfeng-videocut"),
-    '{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"foreground","productVersion":"0.4.7","studioBuildId":"build-4321","pid":4321,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"0.4.7","pid":4321,"runtimeMode":"foreground","studioBuildId":"build-4321"}}}',
+    `{"schemaVersion":1,"product":"chengfeng-videocut","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"foreground","productVersion":"${runtimeContract.minimumRuntimeVersion}","studioBuildId":"build-4321","pid":4321,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"${runtimeContract.minimumRuntimeVersion}","pid":4321,"runtimeMode":"foreground","studioBuildId":"build-4321"}}}`,
   );
   const foreground = run(foregroundBin);
   assert.equal(foreground.status, 21);
@@ -92,7 +93,7 @@ try {
 
   const forgedBin = fakeRuntime(
     path.join(tmp, "forged", "chengfeng-videocut"),
-    `{"schemaVersion":1,"product":"another-product","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"${expectedRuntimeMode}","productVersion":"0.4.7","studioBuildId":"build-123","pid":1234,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"0.4.7","pid":1234,"runtimeMode":"${expectedRuntimeMode}","studioBuildId":"build-123"}}}`,
+    `{"schemaVersion":1,"product":"another-product","command":"service.ensure","ok":true,"data":{"serviceApiVersion":1,"action":"ensure","state":"running","ready":true,"healthy":true,"configured":true,"runtimeMode":"${expectedRuntimeMode}","productVersion":"${runtimeContract.minimumRuntimeVersion}","studioBuildId":"build-123","pid":1234,"url":"http://127.0.0.1:5190/","identity":{"product":"chengfeng-videocut","productVersion":"${runtimeContract.minimumRuntimeVersion}","pid":1234,"runtimeMode":"${expectedRuntimeMode}","studioBuildId":"build-123"}}}`,
   );
   const forged = run(forgedBin);
   assert.equal(forged.status, 21);

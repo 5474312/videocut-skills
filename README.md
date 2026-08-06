@@ -110,7 +110,7 @@ Runtime 默认安装到：
 ~/.chengfeng-videocut
 ```
 
-Plugin 0.10.7 的产品合同固定为 `v0.4.7` Release、Runtime 0.4.7+ EDL 与跨平台用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。桌面路径优先识别受管安装；纯 CLI 首次安装会从这个精确 Release 下载 `install.cjs` 和 `SHA256SUMS.txt`，先验证安装器，再让安装器读取同一个 Release 的产品包；不使用会漂移的 `latest`。Release 不存在、资产不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退旧版。
+Plugin 0.10.8 的产品合同固定为 `v0.4.8` Release、Runtime 0.4.8+ EDL 与跨平台用户级常驻 service 能力，以及 Studio 的三个顶层视图与 `managedTimelineEditing=true`。桌面路径优先识别受管安装；纯 CLI 首次安装只从这个精确 Release 下载 `install.cjs`、`SHA256SUMS.txt` 与 Runtime portable contract；安装器只消费 `chengfeng-videocut-portable.tar.gz`，并要求清单同时覆盖它和版本化的 `chengfeng-videocut-0.4.8-portable.tar.gz`，绝不下载桌面 DMG/EXE。不使用会漂移的 `latest`。Release 不存在、portable 资产或哈希不全、哈希不匹配或已有 Runtime 不兼容时均停止，不覆盖现有安装，也不回退旧版。
 
 每个业务流程在第一次产品 API 前、每次人工审核恢复前都会执行共享 `ensure-running`：
 
@@ -220,11 +220,12 @@ chengfeng-videocut-skills/
 
 ## 发布边界
 
-Plugin 0.10.7 依赖 Runtime 0.4.7 的 Windows 安装、用户服务与当前 EDL / Studio 合同。稳定发布顺序是：
+Plugin 0.10.8 依赖 Runtime 0.4.8 的 portable 安装、用户服务与当前 EDL / Studio 合同。稳定发布顺序是：
 
 ```text
-Runtime v0.4.7 Release
-  -> install.sh、install.cjs 与全部产品包进入 SHA256SUMS
+Runtime v0.4.8 Release
+  -> install.sh、install.cjs、版本化/稳定名 portable 与 tgz 进入 SHA256SUMS
+  -> Skills 路径只下载 stable portable tarball，不下载 Desktop DMG/EXE
   -> 从公开附件在 Windows / macOS 隔离环境安装并执行 doctor
   -> Plugin 内容提交 A
   -> 只增加 provenance 的 Marketplace 快照 B

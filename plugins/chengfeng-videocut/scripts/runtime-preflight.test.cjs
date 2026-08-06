@@ -46,7 +46,7 @@ function writeNodeExecutable(file, body) {
   return file;
 }
 
-function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.4.7") {
+function fakeRuntime(file, healthy = true, runtimeCapabilities = capabilities, version = "0.4.8") {
   const doctor = JSON.stringify({
     schemaVersion: 1,
     product: "chengfeng-videocut",
@@ -71,15 +71,19 @@ process.exit(2);
 `);
 }
 
-function writeRelease(directory, installerBody, checksum = true) {
+function writeRelease(directory, installerBody, checksum = true, portableChecksums = true) {
   fs.mkdirSync(directory, { recursive: true });
   const installer = path.join(directory, "install.cjs");
   writeExecutable(installer, installerBody);
   const actual = createHash("sha256").update(fs.readFileSync(installer)).digest("hex");
-  fs.writeFileSync(
-    path.join(directory, "SHA256SUMS.txt"),
-    `${checksum === true ? actual : String(checksum)}  install.cjs\n`,
-  );
+  const lines = [`${checksum === true ? actual : String(checksum)}  install.cjs`];
+  if (portableChecksums) {
+    lines.push(
+      `${"1".repeat(64)}  ${runtimeContract.portableAsset}`,
+      `${"2".repeat(64)}  ${runtimeContract.versionedPortableAsset}`,
+    );
+  }
+  fs.writeFileSync(path.join(directory, "SHA256SUMS.txt"), `${lines.join("\n")}\n`);
   return installer;
 }
 
@@ -100,6 +104,13 @@ try {
   assert.equal(runtimeContract.releaseTag, `v${runtimeContract.releaseVersion}`);
   assert.notEqual(pluginManifest.version, runtimeContract.releaseVersion, "Plugin package version is independent from Product Runtime release version");
   assert.equal(runtimeContract.minimumRuntimeVersion, runtimeContract.releaseVersion, "the independent Plugin still declares its minimum compatible Runtime");
+  assert.equal(runtimeContract.portableAsset, "chengfeng-videocut-portable.tar.gz");
+  assert.equal(
+    runtimeContract.versionedPortableAsset,
+    `chengfeng-videocut-${runtimeContract.releaseVersion}-portable.tar.gz`,
+  );
+  assert.doesNotMatch(runtimeContract.portableAsset, /\.(dmg|exe)$/i);
+  assert.doesNotMatch(runtimeContract.versionedPortableAsset, /\.(dmg|exe)$/i);
 
   const readyBin = fakeRuntime(path.join(tmp, "ready", "chengfeng-videocut"), true);
   const ready = run(["--json"], { CHENGFENG_VIDEOCUT_BIN: readyBin });
@@ -112,14 +123,14 @@ try {
     true,
   );
   fs.mkdirSync(path.join(desktopHome, "app", "current"), { recursive: true });
-  fs.writeFileSync(path.join(desktopHome, "app", "current", "VERSION"), "0.4.7\n");
+  fs.writeFileSync(path.join(desktopHome, "app", "current", "VERSION"), "0.4.8\n");
   fs.writeFileSync(
     path.join(desktopHome, "desktop-installation.json"),
     JSON.stringify({
       schemaVersion: 1,
       product: "chengfeng-videocut",
       source: "desktop",
-      productVersion: "0.4.7",
+      productVersion: "0.4.8",
     }),
   );
   const pathRuntimeDir = path.join(tmp, "path-runtime");
@@ -133,7 +144,7 @@ try {
   const desktopPayload = JSON.parse(desktopManaged.stdout);
   assert.equal(desktopPayload.runtime.kind, "desktop-managed");
   assert.equal(desktopPayload.runtime.command, desktopBin);
-  assert.equal(desktopPayload.runtime.runtimeVersion, "0.4.7");
+  assert.equal(desktopPayload.runtime.runtimeVersion, "0.4.8");
 
   const missing = run(["--json"], { CHENGFENG_VIDEOCUT_BIN: path.join(tmp, "missing") });
   assert.equal(missing.status, 10);
@@ -183,14 +194,14 @@ try {
   assert.equal(fs.existsSync(mustNotRun), false, "an existing incompatible Runtime must never be overwritten");
 
   const installHome = path.join(tmp, "installed-home");
-  const releaseDirectory = path.join(tmp, "release-v0.4.7");
+  const releaseDirectory = path.join(tmp, "release-v0.4.8");
   const observedReleaseBase = path.join(tmp, "observed-release-base");
   const releaseRuntimeDirectory = path.join(tmp, "release-runtime");
   fakeRuntime(
     path.join(releaseRuntimeDirectory, "chengfeng-videocut"),
     true,
     capabilities,
-    "0.4.7",
+    "0.4.8",
   );
   writeRelease(releaseDirectory, `
 const nodeFs = require("node:fs");
@@ -206,7 +217,7 @@ nodeFs.cpSync(${JSON.stringify(releaseRuntimeDirectory)}, target, { recursive: t
   });
   assert.equal(installed.status, 0, installed.stderr);
   assert.equal(JSON.parse(installed.stdout).installed, true);
-  assert.match(installed.stderr, /v0\.4\.7/);
+  assert.match(installed.stderr, /v0\.4\.8/);
   assert.equal(fs.readFileSync(observedReleaseBase, "utf8"), `file://${releaseDirectory}`);
 
   const unavailableHome = path.join(tmp, "unavailable-home");
@@ -240,6 +251,23 @@ nodeFs.cpSync(${JSON.stringify(releaseRuntimeDirectory)}, target, { recursive: t
   assert.equal(badChecksum.status, 12);
   assert.equal(JSON.parse(badChecksum.stdout).error.details.reasonCode, "installer_checksum_mismatch");
   assert.equal(fs.existsSync(checksumMarker), false, "an unverified installer must never execute");
+
+  const incompletePortableRelease = path.join(tmp, "release-missing-portable-checksum");
+  const incompletePortableMarker = path.join(tmp, "portable-checksum-installer-ran");
+  writeRelease(
+    incompletePortableRelease,
+    `require("node:fs").writeFileSync(${JSON.stringify(incompletePortableMarker)}, "");\n`,
+    true,
+    false,
+  );
+  const incompletePortable = run(["--install-if-missing", "--json"], {
+    CHENGFENG_VIDEOCUT_BIN: path.join(tmp, "missing-portable-checksum-bin"),
+    CHENGFENG_VIDEOCUT_HOME: path.join(tmp, "incomplete-portable-home"),
+    CHENGFENG_VIDEOCUT_RELEASE_BASE: `file://${incompletePortableRelease}`,
+  });
+  assert.equal(incompletePortable.status, 12);
+  assert.equal(JSON.parse(incompletePortable.stdout).error.details.reasonCode, "runtime_release_incomplete");
+  assert.equal(fs.existsSync(incompletePortableMarker), false, "a release without portable SHA-256 entries must not execute its installer");
 
   // 用户确认后的原子升级：托管位置有旧版（能力齐但版本旧）→ --upgrade 放行安装器。
   const upgradeHome = path.join(tmp, "upgrade-home");
@@ -283,6 +311,7 @@ nodeFs.cpSync(${JSON.stringify(releaseRuntimeDirectory)}, target, { recursive: t
     installedFromExactRelease: true,
     unavailableReleaseFailedClosed: true,
     badChecksumFailedClosed: true,
+    portableChecksumRequiredBeforeInstallerRuns: true,
     installFailed: 12,
   }));
 } finally {

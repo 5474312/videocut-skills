@@ -76,6 +76,9 @@ function loadRuntimeContract(contractPath = CONTRACT_PATH) {
     contract.releaseTag === `v${contract.releaseVersion}` &&
     parseSemver(contract?.minimumRuntimeVersion) !== null &&
     /^[A-Za-z0-9_.-]+$/.test(contract?.installerAsset || "") &&
+    contract?.portableAsset === "chengfeng-videocut-portable.tar.gz" &&
+    contract?.versionedPortableAsset ===
+      `chengfeng-videocut-${contract.releaseVersion}-portable.tar.gz` &&
     /^[A-Za-z0-9_.-]+$/.test(contract?.checksumAsset || "") &&
     isPlainObject(studioCapabilities) &&
     Array.isArray(studioCapabilities.topLevelViews) &&
@@ -316,7 +319,8 @@ function expectedChecksum(checksumText, assetName) {
 }
 
 function verifyInstaller(installer, checksumFile) {
-  const expected = expectedChecksum(readFileSync(checksumFile, "utf8"), RUNTIME_CONTRACT.installerAsset);
+  const sums = readFileSync(checksumFile, "utf8");
+  const expected = expectedChecksum(sums, RUNTIME_CONTRACT.installerAsset);
   if (!expected) {
     throw new RuntimeInstallError(
       "runtime_release_incomplete",
@@ -329,6 +333,14 @@ function verifyInstaller(installer, checksumFile) {
       "installer_checksum_mismatch",
       `${RUNTIME_CONTRACT.releaseTag} 安装器 SHA-256 校验失败；安装已停止。`,
     );
+  }
+  for (const asset of [RUNTIME_CONTRACT.portableAsset, RUNTIME_CONTRACT.versionedPortableAsset]) {
+    if (!expectedChecksum(sums, asset)) {
+      throw new RuntimeInstallError(
+        "runtime_release_incomplete",
+        `${RUNTIME_CONTRACT.releaseTag} 的 ${RUNTIME_CONTRACT.checksumAsset} 未声明 Runtime portable asset ${asset}；安装已停止。`,
+      );
+    }
   }
 }
 
